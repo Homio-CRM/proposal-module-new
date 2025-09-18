@@ -79,6 +79,7 @@ Crie um arquivo `.env.local` com:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_PROJECT_ID=your_project_id
 HOMIO_APP_SHARED_SECRET=your_shared_secret
 ```
 

@@ -7,6 +7,7 @@ Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_PROJECT_ID=your_project_id
 
 # Homio System Configuration (Chave SSO para Decrypt)
 HOMIO_APP_SHARED_SECRET=your_shared_secret
@@ -37,6 +38,7 @@ A variável `HOMIO_APP_SHARED_SECRET` é a **chave SSO** usada para descriptogra
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `service_role` → `SUPABASE_SERVICE_ROLE_KEY`
+   - `Project ID` → `SUPABASE_PROJECT_ID`
 
 ## Configuração da tabela profiles no Supabase:
 
