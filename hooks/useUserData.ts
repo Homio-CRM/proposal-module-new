@@ -48,13 +48,13 @@ export default function useUserData(): UseUserDataReturn {
         const handleAuthentication = async () => {
             if (process.env.NODE_ENV === 'development') {
                 const mockData: UserData = {
-                    userId: "oKD3wYXnvt2LJVvvtL9T",
-                    companyId: "3PL31w5rI7KFAU9Hfd8Y",
+                    userId: "mock_user_id_123",
+                    companyId: "mock_company_id_456",
                     role: "admin",
                     type: "agency",
-                    activeLocation: "d8voPwkhJK7k7S5xjHcA",
-                    userName: "Luan Paganucci",
-                    email: "luan.paganucci@homio.com.br"
+                    activeLocation: "mock_location_id_789",
+                    userName: "Mock User",
+                    email: "mock.user@example.com"
                 }
                 
                 try {

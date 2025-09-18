@@ -3,35 +3,35 @@ import type { UserRole } from './core'
 export type { UserRole }
 
 export interface RolePermissions {
-    canCreateListing: boolean
-    canEditListing: boolean
-    canDeleteListing: boolean
-    canViewAllListings: boolean
+    canCreate: boolean
+    canRead: boolean
+    canUpdate: boolean
+    canDelete: boolean
     canManageUsers: boolean
+    canManageSettings: boolean
     canExportData: boolean
     canImportData: boolean
-    canManageSettings: boolean
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     admin: {
-        canCreateListing: true,
-        canEditListing: true,
-        canDeleteListing: true,
-        canViewAllListings: true,
+        canCreate: true,
+        canRead: true,
+        canUpdate: true,
+        canDelete: true,
         canManageUsers: true,
+        canManageSettings: true,
         canExportData: true,
         canImportData: true,
-        canManageSettings: true,
     },
     user: {
-        canCreateListing: true,
-        canEditListing: true,
-        canDeleteListing: false,
-        canViewAllListings: false,
+        canCreate: true,
+        canRead: true,
+        canUpdate: true,
+        canDelete: false,
         canManageUsers: false,
+        canManageSettings: false,
         canExportData: false,
         canImportData: false,
-        canManageSettings: false,
     },
 }

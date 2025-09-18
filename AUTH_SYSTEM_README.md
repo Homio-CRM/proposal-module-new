@@ -71,7 +71,7 @@ function MyComponent() {
 import { serverHasPermission } from '@/lib/utils/permissions'
 
 // Verificar se usuário tem permissão específica
-const canDelete = serverHasPermission(userData.role, 'canDeleteListing')
+const canDelete = serverHasPermission(userData.role, 'canDelete')
 
 // Obter todas as permissões do usuário
 const permissions = serverGetUserPermissions(userData.role)
@@ -91,17 +91,17 @@ const permissions = serverGetUserPermissions(userData.role)
 
 ## Modo Desenvolvimento
 
-Em modo desenvolvimento (`NODE_ENV === 'development'`), o sistema usa dados mockados:
+Em modo desenvolvimento (`NODE_ENV === 'development'`), o sistema usa dados mockados genéricos:
 
 ```typescript
 const mockData: UserData = {
-    userId: "oKD3wYXnvt2LJVvvtL9T",
-    companyId: "3PL31w5rI7KFAU9Hfd8Y",
+    userId: "mock_user_id_123",
+    companyId: "mock_company_id_456",
     role: "admin",
     type: "agency",
-    activeLocation: "d8voPwkhJK7k7S5xjHcA",
-    userName: "Luan Paganucci",
-    email: "luan.paganucci@homio.com.br"
+    activeLocation: "mock_location_id_789",
+    userName: "Mock User",
+    email: "mock.user@example.com"
 }
 ```
 
@@ -121,15 +121,15 @@ O sistema implementa cache em memória com TTL configurável:
 - **admin**: Acesso total a todas as funcionalidades
 - **user**: Acesso limitado a funcionalidades básicas
 
-### Permissões:
-- `canCreateListing`
-- `canEditListing`
-- `canDeleteListing`
-- `canViewAllListings`
-- `canManageUsers`
-- `canExportData`
-- `canImportData`
-- `canManageSettings`
+### Permissões Genéricas:
+- `canCreate` - Criar novos registros
+- `canRead` - Visualizar dados
+- `canUpdate` - Editar registros existentes
+- `canDelete` - Deletar registros
+- `canManageUsers` - Gerenciar usuários
+- `canManageSettings` - Gerenciar configurações
+- `canExportData` - Exportar dados
+- `canImportData` - Importar dados
 
 ## APIs Disponíveis
 
@@ -167,7 +167,7 @@ Decripta dados do usuário vindos do sistema externo.
 - Verifique se o `SUPABASE_SERVICE_ROLE_KEY` está correto
 
 ### Erro de Decrypt
-- Verifique se `GHL_APP_SHARED_SECRET` está configurado
+- Verifique se `HOMIO_APP_SHARED_SECRET` está configurado
 - Confirme se a chave é a mesma usada no sistema externo
 
 ### Cache não funcionando

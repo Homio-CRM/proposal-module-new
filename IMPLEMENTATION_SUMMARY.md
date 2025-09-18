@@ -2,7 +2,7 @@
 
 ## ✅ Implementação Concluída
 
-O sistema de autenticação com Supabase foi implementado com sucesso no projeto **modules-base**. Este é um app genérico que pode ser clonado e usado como base para todos os módulos da agência GHL.
+O sistema de autenticação com Supabase foi implementado com sucesso no projeto **modules-base**. Este é um app genérico que pode ser clonado e usado como base para todos os módulos da agência Homio.
 
 ## 📁 Estrutura Criada
 
@@ -23,7 +23,7 @@ O sistema de autenticação com Supabase foi implementado com sucesso no projeto
 
 ### APIs
 - `app/api/auth/login/route.ts` - API de login e criação de usuários
-- `app/api/decrypt-user-data/route.ts` - API de decrypt de dados do GHL
+- `app/api/decrypt-user-data/route.ts` - API de decrypt de dados do Homio
 
 ### React Hooks e Context
 - `hooks/useUserData.ts` - Hook para gerenciar dados do usuário
@@ -79,7 +79,7 @@ Crie um arquivo `.env.local` com:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-GHL_APP_SHARED_SECRET=your_shared_secret
+HOMIO_APP_SHARED_SECRET=your_shared_secret
 ```
 
 ### 2. Tabela no Supabase
@@ -89,7 +89,7 @@ Execute o SQL no Supabase:
 CREATE TABLE profiles (
     id UUID REFERENCES auth.users(id) PRIMARY KEY,
     agency_id TEXT,
-    ghl_user_id TEXT,
+    homio_user_id TEXT,
     email TEXT,
     role TEXT CHECK (role IN ('admin', 'user')),
     created_at TIMESTAMP DEFAULT NOW(),
@@ -153,4 +153,4 @@ const canDelete = serverHasPermission(userData.role, 'canDeleteListing')
 3. **Personalizar** - Adaptar para necessidades específicas
 4. **Clonar** - Usar como base para novos módulos
 
-O sistema está pronto para uso e pode ser clonado para criar novos módulos da agência GHL!
+O sistema está pronto para uso e pode ser clonado para criar novos módulos da agência Homio!

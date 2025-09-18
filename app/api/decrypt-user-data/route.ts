@@ -32,11 +32,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserData 
 
         const { encryptedData }: RequestBody = await request.json()
 
-        if (!process.env.GHL_APP_SHARED_SECRET) {
-            throw new Error('GHL_APP_SHARED_SECRET not configured')
+        if (!process.env.HOMIO_APP_SHARED_SECRET) {
+            throw new Error('HOMIO_APP_SHARED_SECRET not configured')
         }
 
-        const userData = decryptUserData(encryptedData, process.env.GHL_APP_SHARED_SECRET)
+        const userData = decryptUserData(encryptedData, process.env.HOMIO_APP_SHARED_SECRET)
 
         return NextResponse.json(userData)
     } catch (error) {

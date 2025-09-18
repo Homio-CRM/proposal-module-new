@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         const existingUser = users.find(user => user.email === userData.email)
 
         let userId: string
-        const userPassword = `ghl_${userData.userId}_${Date.now()}`
+        const userPassword = `homio_${userData.userId}_${Date.now()}`
 
         if (!existingUser) {
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
                 password: userPassword,
                 email_confirm: true,
                 user_metadata: {
-                    ghl_user_id: userData.userId,
+                    homio_user_id: userData.userId,
                     full_name: userData.userName
                 }
             })
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin.from('profiles').upsert({
             id: userId,
             agency_id: userData.activeLocation,
-            ghl_user_id: userData.userId,
+            homio_user_id: userData.userId,
             email: userData.email,
             role: userData.role
         })

@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Modules Base - GHL",
-  description: "Base application for GHL modules",
+  title: "Modules Base - Homio",
+  description: "Base application for Homio modules",
 };
 
 export default function RootLayout({
