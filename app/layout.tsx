@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./datepicker.css";
 import { UserDataProvider } from "@/lib/contexts/UserDataContext";
 
 const geistSans = Geist({

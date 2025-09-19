@@ -1,6 +1,10 @@
 'use client'
 
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   const { userData, loading, error } = useUserDataContext();
@@ -103,6 +107,30 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {userData.role === 'admin' && (
+            <div className="mt-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5 text-primary-600" />
+                    <span>Formulário de Proposta</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Acesse o formulário multistep para criar novas propostas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/proposal-form">
+                    <Button className="flex items-center space-x-2">
+                      <span>Acessar Formulário</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

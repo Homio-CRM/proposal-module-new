@@ -46,7 +46,7 @@ export default function useUserData(): UseUserDataReturn {
         const cacheKey = CACHE_KEYS.USER_SESSION
 
         const handleAuthentication = async () => {
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true') {
                 const mockData: UserData = {
                     userId: "mock_user_id_123",
                     companyId: "mock_company_id_456",
@@ -57,15 +57,9 @@ export default function useUserData(): UseUserDataReturn {
                     email: "mock.user@example.com"
                 }
                 
-                try {
-                    await authService.initializeSession(mockData)
-                    userCache.set(cacheKey, mockData, PERFORMANCE_CONFIG.CACHE_TTL.USER_SESSION)
-                    setUserData(mockData)
-                } catch (err) {
-                    console.error('❌ Erro ao inicializar sessão Supabase em desenvolvimento:', err)
-                } finally {
-                    setLoading(false)
-                }
+                userCache.set(cacheKey, mockData, PERFORMANCE_CONFIG.CACHE_TTL.USER_SESSION)
+                setUserData(mockData)
+                setLoading(false)
                 return
             }
 
