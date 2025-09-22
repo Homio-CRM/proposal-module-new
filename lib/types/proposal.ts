@@ -60,3 +60,24 @@ export interface ProposalFormStep {
   description: string
   isOptional?: boolean
 }
+
+export type ProposalStatus = 'em_analise' | 'aprovada' | 'negada'
+
+export interface ProposalListItem {
+  id: string
+  title: string
+  primaryContactName: string
+  development: string
+  unit: string
+  status: ProposalStatus
+  proposalDate: string
+  price?: number
+  assignedAgent?: string
+}
+
+export interface ProposalFilters {
+  search: string
+  development: string
+  unit: string
+  status: ProposalStatus | 'all'
+}

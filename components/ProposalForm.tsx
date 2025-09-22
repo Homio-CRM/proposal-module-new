@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -78,6 +79,7 @@ const STEP_ICONS = {
 
 export default function ProposalForm() {
   const { userData, loading } = useUserDataContext()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<ProposalFormData>({
@@ -636,10 +638,15 @@ export default function ProposalForm() {
           <div className="hidden lg:block w-96 bg-white border-r border-neutral-200 p-6">
             <div className="sticky top-4">
               <div className="mb-8">
-                <button className="flex items-center space-x-2 text-neutral-600 hover:text-neutral-900 transition-colors mb-6">
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm">Voltar para Propostas</span>
-                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push('/proposals')}
+                  className="text-neutral-600 hover:text-neutral-900 mb-6"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar para Propostas
+                </Button>
                 <h1 className="text-2xl font-bold text-neutral-900">
                   Formulário de Proposta
                 </h1>
@@ -657,7 +664,7 @@ export default function ProposalForm() {
                       <div key={step.id} className="relative">
                         {/* Connecting Line */}
                         {index < FORM_STEPS.length - 1 && (
-                          <div className="absolute left-7 top-12 w-px h-6 bg-neutral-300" />
+                          <div className="absolute left-7.5 top-14 w-px h-6 bg-neutral-300" />
                         )}
                         
                         <button

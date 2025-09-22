@@ -54,7 +54,6 @@ const CustomDatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             className
           )}
           wrapperClassName="w-full"
-          ref={ref}
           {...props}
         />
         <Calendar className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />

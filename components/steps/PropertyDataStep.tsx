@@ -30,7 +30,7 @@ export default function PropertyDataStep({
     onDataChange({ ...formData, [field]: value })
     
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }))
+      // Error cleared
     }
   }
 

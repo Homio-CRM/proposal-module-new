@@ -70,7 +70,6 @@ export default function PaymentInstallmentsStep({
         delete newErrors[key]
       }
     })
-    setErrors(newErrors)
   }
 
   const updateInstallment = (id: string, field: keyof PaymentInstallment, value: string | number) => {
@@ -87,7 +86,6 @@ export default function PaymentInstallmentsStep({
     if (errors[errorKey]) {
       const newErrors = { ...errors }
       delete newErrors[errorKey]
-      setErrors(newErrors)
     }
   }
 

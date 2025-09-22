@@ -18,21 +18,8 @@ export default function useUserData(): UseUserDataReturn {
                 return
             }
 
-            const response = await fetch('/api/decrypt-user-data', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ encryptedData: 'mock_encrypted_data' })
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to decrypt user data')
-            }
-
-            const userData = await response.json()
-            
-            await authService.initializeSession(userData)
-            userCache.set(cacheKey, userData, PERFORMANCE_CONFIG.CACHE_TTL.USER_SESSION)
-            setUserData(userData)
+            setError('Authentication required - no valid session found')
+            setUserData(null)
         } catch (err) {
             console.error('❌ Erro no fluxo de autenticação:', err)
             setError(err instanceof Error ? err.message : 'Unknown error')
@@ -46,15 +33,18 @@ export default function useUserData(): UseUserDataReturn {
         const cacheKey = CACHE_KEYS.USER_SESSION
 
         const handleAuthentication = async () => {
-            if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true') {
+            console.log('🔍 NODE_ENV:', process.env.NODE_ENV)
+            
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Modo desenvolvimento - usando dados mock')
                 const mockData: UserData = {
-                    userId: "mock_user_id_123",
-                    companyId: "mock_company_id_456",
+                    userId: "oKD3wYXnvt2LJVvvtL9T",
+                    companyId: "3PL31w5rI7KFAU9Hfd8Y",
                     role: "admin",
                     type: "agency",
-                    activeLocation: "mock_location_id_789",
-                    userName: "Mock User",
-                    email: "mock.user@example.com"
+                    activeLocation: "d8voPwkhJK7k7S5xjHcA",
+                    userName: "Luan Paganucci",
+                    email: "luan.paganucci@homio.com.br"
                 }
                 
                 userCache.set(cacheKey, mockData, PERFORMANCE_CONFIG.CACHE_TTL.USER_SESSION)
@@ -63,13 +53,23 @@ export default function useUserData(): UseUserDataReturn {
                 return
             }
 
+            console.log('❌ Modo produção - limpando cache e exigindo autenticação')
+            userCache.clear()
+            
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('sb-refresh-token')
+            }
+
             const cachedData = userCache.get<UserData>(cacheKey)
+            console.log('🔍 Dados em cache após limpeza:', cachedData)
             if (cachedData) {
+                console.log('⚠️ Dados em cache encontrados após limpeza:', cachedData)
                 setUserData(cachedData)
                 setLoading(false)
                 return
             }
 
+            console.log('🔐 Inicializando sessão - deve dar erro')
             await initializeUserSession(cacheKey)
         }
 

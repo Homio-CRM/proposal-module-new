@@ -4,7 +4,7 @@ import type { UserData } from '@/lib/types/core'
 import { validateUserRole } from '@/lib/utils/permissions'
 import { supabase } from '@/lib/supabaseClient'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock.supabase.co'
+const supabaseUrl = process.env.SUPABASE_URL || 'https://mock.supabase.co'
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'mock_service_role_key'
 
 const supabaseAdmin = createClient(
