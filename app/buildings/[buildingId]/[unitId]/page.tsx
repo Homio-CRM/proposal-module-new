@@ -13,17 +13,20 @@ export default function UnitDetailPage() {
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
   
-  const unitId = params.id as string
+  const buildingId = params.buildingId as string
+  const unitId = params.unitId as string
   
-  // Find the unit across all buildings
-  const unitWithBuilding = mockBuildingsWithUnits
-    .flatMap(building => 
-      building.units.map(unit => ({
-        ...unit,
-        building
-      }))
-    )
-    .find(u => u.id === unitId)
+  // Find the building first
+  const building = mockBuildingsWithUnits.find(b => b.id === buildingId)
+  
+  // Then find the unit within that building
+  const unit = building?.units.find(u => u.id === unitId)
+  
+  // Create unitWithBuilding object
+  const unitWithBuilding = unit && building ? {
+    ...unit,
+    building
+  } : null
 
   if (loading) {
     return (
@@ -88,7 +91,7 @@ export default function UnitDetailPage() {
           <div className="flex items-center gap-4 mb-6">
             <Button
               variant="outline"
-              onClick={() => router.push('/units')}
+              onClick={() => router.push('/buildings')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -103,7 +106,7 @@ export default function UnitDetailPage() {
                 Unidade não encontrada
               </h2>
               <p className="text-gray-600">
-                A unidade com ID "{unitId}" não foi encontrada.
+                A unidade "{unitId}" no empreendimento "{buildingId}" não foi encontrada.
               </p>
             </div>
           </div>
@@ -121,7 +124,7 @@ export default function UnitDetailPage() {
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
-                onClick={() => router.push('/units')}
+                onClick={() => router.push('/buildings')}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />

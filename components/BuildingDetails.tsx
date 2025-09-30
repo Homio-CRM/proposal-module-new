@@ -53,7 +53,7 @@ export function BuildingDetails({ building }: BuildingDetailsProps) {
   }
 
   const handleUnitClick = (unitId: string) => {
-    router.push(`/units/${unitId}`)
+    router.push(`/buildings/${building.id}/${unitId}`)
   }
 
   return (

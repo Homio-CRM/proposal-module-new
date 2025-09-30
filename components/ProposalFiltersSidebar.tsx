@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { ProposalFilters, ProposalStatus } from '@/lib/types/proposal'
 import { Filter, ChevronRight } from 'lucide-react'
+import { BackButton } from '@/components/ui/back-button'
 
 interface ProposalFiltersSidebarProps {
   filters: ProposalFilters
@@ -101,6 +102,10 @@ export function ProposalFiltersSidebar({
       {isExpanded ? (
         <div className="p-4 h-full overflow-y-auto">
           <div className="space-y-4">
+            <BackButton href="/buildings">
+              Ver Empreendimentos
+            </BackButton>
+
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-neutral-900">Filtros</h2>
               <Button

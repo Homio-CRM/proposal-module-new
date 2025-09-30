@@ -7,20 +7,48 @@ import { CustomDatePicker } from '@/components/ui/date-picker'
 import { FormattedInput } from '@/components/ui/formatted-input'
 import type { ContactData } from '@/lib/types/proposal'
 
-// Funções de formatação
+// Funções de formatação progressiva
 const formatCPF = (value: string): string => {
-  return value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '')
+  
+  // Aplica formatação progressiva
+  if (numbers.length <= 3) {
+    return numbers
+  } else if (numbers.length <= 6) {
+    return `${numbers.slice(0, 3)}.${numbers.slice(3)}`
+  } else if (numbers.length <= 9) {
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`
+  } else {
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`
+  }
 }
 
 const formatCEP = (value: string): string => {
-  return value.replace(/(\d{5})(\d{3})/, '$1-$2')
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '')
+  
+  // Aplica formatação progressiva
+  if (numbers.length <= 5) {
+    return numbers
+  } else {
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`
+  }
 }
 
 const formatPhone = (value: string): string => {
-  if (value.length <= 10) {
-    return value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+  // Remove tudo que não é número
+  const numbers = value.replace(/\D/g, '')
+  
+  // Aplica formatação progressiva
+  if (numbers.length <= 2) {
+    return numbers
+  } else if (numbers.length <= 6) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+  } else if (numbers.length <= 10) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`
   } else {
-    return value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
   }
 }
 
@@ -43,35 +71,6 @@ const NATIONALITY_OPTIONS = [
   { value: 'estrangeira', label: 'Estrangeira' }
 ]
 
-const BRAZILIAN_STATES = [
-  { value: 'AC', label: 'Acre' },
-  { value: 'AL', label: 'Alagoas' },
-  { value: 'AP', label: 'Amapá' },
-  { value: 'AM', label: 'Amazonas' },
-  { value: 'BA', label: 'Bahia' },
-  { value: 'CE', label: 'Ceará' },
-  { value: 'DF', label: 'Distrito Federal' },
-  { value: 'ES', label: 'Espírito Santo' },
-  { value: 'GO', label: 'Goiás' },
-  { value: 'MA', label: 'Maranhão' },
-  { value: 'MT', label: 'Mato Grosso' },
-  { value: 'MS', label: 'Mato Grosso do Sul' },
-  { value: 'MG', label: 'Minas Gerais' },
-  { value: 'PA', label: 'Pará' },
-  { value: 'PB', label: 'Paraíba' },
-  { value: 'PR', label: 'Paraná' },
-  { value: 'PE', label: 'Pernambuco' },
-  { value: 'PI', label: 'Piauí' },
-  { value: 'RJ', label: 'Rio de Janeiro' },
-  { value: 'RN', label: 'Rio Grande do Norte' },
-  { value: 'RS', label: 'Rio Grande do Sul' },
-  { value: 'RO', label: 'Rondônia' },
-  { value: 'RR', label: 'Roraima' },
-  { value: 'SC', label: 'Santa Catarina' },
-  { value: 'SP', label: 'São Paulo' },
-  { value: 'SE', label: 'Sergipe' },
-  { value: 'TO', label: 'Tocantins' }
-]
 
 export default function PrimaryContactStep({ 
   data, 
@@ -134,6 +133,25 @@ export default function PrimaryContactStep({
         </div>
 
         <div>
+          <label htmlFor="birthDate" className="block text-sm font-medium text-neutral-700 mb-2">
+            Data de Nascimento *
+          </label>
+          <CustomDatePicker
+            value={formData.birthDate ? new Date(formData.birthDate) : null}
+            onChange={(date) => handleInputChange('birthDate', date ? date.toISOString().split('T')[0] : '')}
+            placeholder="Selecione a data de nascimento"
+            maxDate={new Date()}
+            error={!!errors['primaryContact.birthDate']}
+          />
+          {errors['primaryContact.birthDate'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.birthDate']}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Second Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div>
           <label htmlFor="rg" className="block text-sm font-medium text-neutral-700 mb-2">
             RG *
           </label>
@@ -149,32 +167,40 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.rg']}</p>
           )}
         </div>
-      </div>
 
-      {/* Second Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div>
+          <label htmlFor="rgIssuer" className="block text-sm font-medium text-neutral-700 mb-2">
+            Órgão Emissor do RG
+          </label>
+          <Input
+            id="rgIssuer"
+            type="text"
+            value={formData.rgIssuer}
+            onChange={(e) => handleInputChange('rgIssuer', e.target.value)}
+            placeholder="Ex.: SSP-SP"
+          />
+        </div>
+
         <div>
           <label htmlFor="nationality" className="block text-sm font-medium text-neutral-700 mb-2">
             Nacionalidade *
           </label>
-          <Select
+          <Input
             id="nationality"
+            type="text"
             value={formData.nationality}
             onChange={(e) => handleInputChange('nationality', e.target.value)}
+            placeholder="Digite a nacionalidade"
             className={errors['primaryContact.nationality'] ? 'border-red-500' : ''}
-          >
-            <option value="">Selecione a nacionalidade</option>
-            {NATIONALITY_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
+          />
           {errors['primaryContact.nationality'] && (
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.nationality']}</p>
           )}
         </div>
+      </div>
 
+      {/* Third Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="maritalStatus" className="block text-sm font-medium text-neutral-700 mb-2">
             Estado Civil *
@@ -198,39 +224,16 @@ export default function PrimaryContactStep({
         </div>
 
         <div>
-          <label htmlFor="birthDate" className="block text-sm font-medium text-neutral-700 mb-2">
-            Data de Nascimento *
-          </label>
-          <CustomDatePicker
-            value={formData.birthDate ? new Date(formData.birthDate) : null}
-            onChange={(date) => handleInputChange('birthDate', date ? date.toISOString().split('T')[0] : '')}
-            placeholder="Selecione a data de nascimento"
-            maxDate={new Date()}
-            error={!!errors['primaryContact.birthDate']}
-          />
-          {errors['primaryContact.birthDate'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.birthDate']}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Third Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-            E-mail *
+          <label htmlFor="profession" className="block text-sm font-medium text-neutral-700 mb-2">
+            Profissão
           </label>
           <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            placeholder="Digite o e-mail"
-            className={errors['primaryContact.email'] ? 'border-red-500' : ''}
+            id="profession"
+            type="text"
+            value={formData.profession || ''}
+            onChange={(e) => handleInputChange('profession', e.target.value)}
+            placeholder="Digite a profissão"
           />
-          {errors['primaryContact.email'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.email']}</p>
-          )}
         </div>
 
         <div>
@@ -252,6 +255,11 @@ export default function PrimaryContactStep({
           )}
         </div>
 
+        
+      </div>
+
+      {/* Fourth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="zipCode" className="block text-sm font-medium text-neutral-700 mb-2">
             CEP *
@@ -270,10 +278,7 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.zipCode']}</p>
           )}
         </div>
-      </div>
 
-      {/* Fourth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="address" className="block text-sm font-medium text-neutral-700 mb-2">
             Endereço *
@@ -291,6 +296,7 @@ export default function PrimaryContactStep({
           )}
         </div>
 
+
         <div>
           <label htmlFor="city" className="block text-sm font-medium text-neutral-700 mb-2">
             Cidade *
@@ -307,7 +313,10 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.city']}</p>
           )}
         </div>
+      </div>
 
+      {/* Fifth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="neighborhood" className="block text-sm font-medium text-neutral-700 mb-2">
             Bairro *
@@ -324,27 +333,36 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.neighborhood']}</p>
           )}
         </div>
-      </div>
 
-      {/* Fifth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
+            E-mail *
+          </label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="Digite o e-mail"
+            className={errors['primaryContact.email'] ? 'border-red-500' : ''}
+          />
+          {errors['primaryContact.email'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.email']}</p>
+          )}
+        </div>
+
         <div>
           <label htmlFor="state" className="block text-sm font-medium text-neutral-700 mb-2">
             Estado *
           </label>
-          <Select
+          <Input
             id="state"
+            type="text"
             value={formData.state}
             onChange={(e) => handleInputChange('state', e.target.value)}
+            placeholder="Digite o estado"
             className={errors['primaryContact.state'] ? 'border-red-500' : ''}
-          >
-            <option value="">Selecione o estado</option>
-            {BRAZILIAN_STATES.map(state => (
-              <option key={state.value} value={state.value}>
-                {state.label}
-              </option>
-            ))}
-          </Select>
+          />
           {errors['primaryContact.state'] && (
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.state']}</p>
           )}

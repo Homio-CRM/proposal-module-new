@@ -15,10 +15,10 @@ import {
   UserPlus,
   Building,
   CreditCard,
-  ArrowLeft,
   X,
   CheckCircle
 } from 'lucide-react'
+import { BackButton } from '@/components/ui/back-button'
 import type { 
   ProposalFormData, 
   ProposalFormStep, 
@@ -82,35 +82,41 @@ export default function ProposalForm() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const initialProposal: ProposalData = {
+    opportunityId: '',
+    proposalDate: '',
+    proposalName: '',
+    responsible: ''
+  }
+  const initialPrimaryContact: ContactData = {
+    name: '',
+    cpf: '',
+    rg: '',
+    rgIssuer: '',
+    nationality: '',
+    maritalStatus: '',
+    birthDate: '',
+    email: '',
+    phone: '',
+    address: '',
+    zipCode: '',
+    city: '',
+    neighborhood: '',
+    state: '',
+    profession: ''
+  }
+  const initialProperty: PropertyData = {
+    development: '',
+    unit: '',
+    floor: '',
+    tower: '',
+    reservedUntil: '',
+    observations: ''
+  }
   const [formData, setFormData] = useState<ProposalFormData>({
-    proposal: {
-      opportunityId: '',
-      proposalDate: ''
-    },
-    primaryContact: {
-      name: '',
-      cpf: '',
-      rg: '',
-      nationality: '',
-      maritalStatus: '',
-      birthDate: '',
-      email: '',
-      phone: '',
-      address: '',
-      zipCode: '',
-      city: '',
-      neighborhood: '',
-      state: ''
-    },
-    property: {
-      development: '',
-      unit: '',
-      floor: '',
-      tower: '',
-      responsible: '',
-      reservedUntil: '',
-      observations: ''
-    },
+    proposal: initialProposal,
+    primaryContact: initialPrimaryContact,
+    property: initialProperty,
     installments: []
   })
 
@@ -162,6 +168,12 @@ export default function ProposalForm() {
         }
         if (!formData.proposal.proposalDate) {
           errors['proposalDate'] = 'Data da proposta é obrigatória'
+        }
+        if (!formData.proposal.responsible.trim()) {
+          errors['proposal.responsible'] = 'Responsável é obrigatório'
+        }
+        if (!formData.proposal.proposalName?.trim()) {
+          errors['proposal.proposalName'] = 'Nome da proposta é obrigatório'
         }
         break
 
@@ -294,9 +306,6 @@ export default function ProposalForm() {
         if (!formData.property.tower.trim()) {
           errors['property.tower'] = 'Torre é obrigatória'
         }
-        if (!formData.property.responsible.trim()) {
-          errors['property.responsible'] = 'Responsável é obrigatório'
-        }
         if (!formData.property.reservedUntil) {
           errors['property.reservedUntil'] = 'Data de reserva é obrigatória'
         }
@@ -330,7 +339,12 @@ export default function ProposalForm() {
   const isStepValid = useCallback((stepId: number): boolean => {
     switch (stepId) {
       case 1: // Proposal Data
-        return !!(formData.proposal.opportunityId.trim() && formData.proposal.proposalDate)
+        return !!(
+          formData.proposal.opportunityId.trim() &&
+          formData.proposal.proposalDate &&
+          formData.proposal.responsible.trim() &&
+          (formData.proposal.proposalName?.trim() || '')
+        )
       
       case 2: // Primary Contact
         const contact = formData.primaryContact
@@ -398,7 +412,6 @@ export default function ProposalForm() {
           property.unit.trim() &&
           property.floor.trim() &&
           property.tower.trim() &&
-          property.responsible.trim() &&
           property.reservedUntil
         )
       
@@ -506,6 +519,26 @@ export default function ProposalForm() {
     }
   }
 
+  const handleClearCurrentStep = () => {
+    setValidationErrors({})
+    setFormData(prev => {
+      switch (currentStep) {
+        case 1:
+          return { ...prev, proposal: { ...initialProposal } }
+        case 2:
+          return { ...prev, primaryContact: { ...initialPrimaryContact } }
+        case 3:
+          return { ...prev, additionalContact: undefined }
+        case 4:
+          return { ...prev, property: { ...initialProperty } }
+        case 5:
+          return { ...prev, installments: [] }
+        default:
+          return prev
+      }
+    })
+  }
+
   const handleStepDataChange = (stepId: number, data: ProposalData | ContactData | PropertyData | PaymentInstallment[] | undefined) => {
     // Limpar erros quando o usuário começar a digitar
     setValidationErrors({})
@@ -548,6 +581,16 @@ export default function ProposalForm() {
             data={formData.proposal}
             onDataChange={(data) => handleStepDataChange(1, data)}
             errors={validationErrors}
+            onPrimaryContactPrefill={(contactData) => {
+              console.log('🔧 ProposalForm recebeu dados do contato:', contactData)
+              setFormData(prev => ({
+                ...prev,
+                primaryContact: {
+                  ...prev.primaryContact,
+                  ...contactData,
+                }
+              }))
+            }}
           />
         )
       case 2:
@@ -638,15 +681,11 @@ export default function ProposalForm() {
           <div className="hidden lg:block w-96 bg-white border-r border-neutral-200 p-6">
             <div className="sticky top-4">
               <div className="mb-8">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push('/proposals')}
-                  className="text-neutral-600 hover:text-neutral-900 mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar para Propostas
-                </Button>
+                <div className="mb-6">
+                  <BackButton href="/proposals">
+                    Voltar para Propostas
+                  </BackButton>
+                </div>
                 <h1 className="text-2xl font-bold text-neutral-900">
                   Formulário de Proposta
                 </h1>
@@ -752,7 +791,7 @@ export default function ProposalForm() {
                       {FORM_STEPS[currentStep - 1]?.description}
                     </p>
                   </div>
-                  <button className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                  <button onClick={handleClearCurrentStep} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
                     <X className="h-5 w-5 text-neutral-500" />
                   </button>
                 </div>

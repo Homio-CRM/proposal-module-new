@@ -17,7 +17,9 @@ function decryptUserData(encryptedUserData: string, sharedSecretKey: string): Us
 
 export async function POST(request: NextRequest): Promise<NextResponse<UserData | { error: string }>> {
     try {
+        console.log('🔍 decrypt-user-data POST - NODE_ENV:', process.env.NODE_ENV)
         if (process.env.NODE_ENV === 'development') {
+            console.log('✅ decrypt-user-data: ambiente de desenvolvimento - retornando mock')
             const mockData: UserData = {
                 userId: "oKD3wYXnvt2LJVvvtL9T",
                 companyId: "3PL31w5rI7KFAU9Hfd8Y",
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserData 
             throw new Error('HOMIO_APP_SHARED_SECRET not configured')
         }
 
+        console.log('🔐 decrypt-user-data: ambiente de produção - tentando decriptografar dados')
         const userData = decryptUserData(encryptedData, process.env.HOMIO_APP_SHARED_SECRET)
 
         return NextResponse.json(userData)

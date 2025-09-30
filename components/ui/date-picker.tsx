@@ -1,11 +1,14 @@
 'use client'
 
 import React, { forwardRef } from 'react'
-import DatePicker from 'react-datepicker'
-import { Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
-import 'react-datepicker/dist/react-datepicker.css'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { ptBR } from 'date-fns/locale'
 
 interface DatePickerProps {
   value?: Date | null
@@ -15,9 +18,6 @@ interface DatePickerProps {
   disabled?: boolean
   minDate?: Date
   maxDate?: Date
-  showTimeSelect?: boolean
-  timeFormat?: string
-  dateFormat?: string
   error?: boolean
 }
 
@@ -30,34 +30,51 @@ const CustomDatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     disabled = false,
     minDate,
     maxDate,
-    showTimeSelect = false,
-    timeFormat = "HH:mm",
-    dateFormat = "dd/MM/yyyy",
     error = false,
     ...props 
   }, ref) => {
+    const [open, setOpen] = useState(false)
+
     return (
-      <div className="relative">
-        <DatePicker
-          selected={value}
-          onChange={onChange}
-          placeholderText={placeholder}
-          disabled={disabled}
-          minDate={minDate}
-          maxDate={maxDate}
-          showTimeSelect={showTimeSelect}
-          timeFormat={timeFormat}
-          dateFormat={showTimeSelect ? `${dateFormat} ${timeFormat}` : dateFormat}
-          className={cn(
-            "flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 ring-offset-background placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-            error && "error",
-            className
-          )}
-          wrapperClassName="w-full"
-          {...props}
-        />
-        <Calendar className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
-      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal flex h-10 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900",
+              !value && "text-neutral-500",
+              error && "border-red-500",
+              className
+            )}
+            disabled={disabled}
+            ref={ref}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4 text-neutral-400" />
+            {value ? value.toLocaleDateString('pt-BR') : placeholder}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value ?? undefined}
+            onSelect={(d) => { 
+              if (d) {
+                const adjusted = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+                onChange(adjusted);
+              } else {
+                onChange(null);
+              }
+              setOpen(false);
+            }}
+            locale={ptBR}
+            disabled={(date) =>
+              (minDate && date < minDate) || (maxDate && date > maxDate)
+            }
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
     )
   }
 )

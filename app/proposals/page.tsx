@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposalFiltersSidebar } from "@/components/ProposalFiltersSidebar";
 import { ProposalTable } from "@/components/ProposalTable";
-import { ProposalFilters } from "@/lib/types/proposal";
-import { mockProposals } from "@/lib/mock/proposals";
-import { Plus, Trash2 } from "lucide-react";
+import { ProposalFilters, ProposalListItem } from "@/lib/types/proposal";
+import { dataService } from "@/lib/services/dataService";
+import { Plus, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function ProposalsPage() {
@@ -20,9 +20,31 @@ export default function ProposalsPage() {
     status: 'all'
   });
   const [selectedProposals, setSelectedProposals] = useState<string[]>([]);
+  const [proposals, setProposals] = useState<ProposalListItem[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProposals = async () => {
+      if (!userData?.companyId) return;
+      
+      try {
+        setProposalsLoading(true);
+        const proposalsData = await dataService.fetchProposalsData(userData.companyId);
+        setProposals(proposalsData);
+      } catch (error) {
+        console.error('Erro ao carregar propostas:', error);
+      } finally {
+        setProposalsLoading(false);
+      }
+    };
+
+    if (userData && !loading) {
+      loadProposals();
+    }
+  }, [userData, loading]);
 
   const filteredProposals = useMemo(() => {
-    return mockProposals
+    return proposals
       .filter(proposal => {
         const matchesSearch = !filters.search || 
           proposal.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -43,7 +65,7 @@ export default function ProposalsPage() {
         // Ordenar por data da proposta (mais recente primeiro)
         return new Date(b.proposalDate).getTime() - new Date(a.proposalDate).getTime();
       });
-  }, [filters]);
+  }, [proposals, filters]);
 
   const handleFiltersChange = (newFilters: ProposalFilters) => {
     setFilters(newFilters);
@@ -88,7 +110,7 @@ export default function ProposalsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || proposalsLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="flex min-w-0">
@@ -211,12 +233,19 @@ export default function ProposalsPage() {
               <h2 className="text-2xl font-bold text-neutral-900">Propostas</h2>
               <p className="text-neutral-600">Gerencie suas propostas imobiliárias</p>
             </div>
-            <Link href="/proposals/create">
-              <Button variant="default">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Proposta
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/proposals/create">
+                <Button variant="default">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Proposta
+                </Button>
+              </Link>
+              <Link href="/config">
+                <Button variant="outline" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {selectedProposals.length > 0 && (

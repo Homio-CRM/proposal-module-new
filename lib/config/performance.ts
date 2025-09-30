@@ -38,5 +38,10 @@ export const API_ENDPOINTS = {
         LISTINGS: '/api/listings',
         CONDOMINIUMS: '/api/condominiums',
         MEDIA: '/api/media',
+    },
+    OPERATIONS: {
+        GET_OPPORTUNITY: '/api/operations/opportunity',
+        GET_CONTACT: '/api/operations/contact',
+        GET_CUSTOM_FIELDS: '/api/operations/custom-fields',
     }
 } as const

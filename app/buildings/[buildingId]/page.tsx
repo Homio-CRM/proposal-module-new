@@ -13,7 +13,9 @@ export default function BuildingDetailPage() {
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
   
-  const buildingId = params.id as string
+  const buildingId = params.buildingId as string
+  
+  // Find the building
   const building = mockBuildingsWithUnits.find(b => b.id === buildingId)
 
   if (loading) {
@@ -94,7 +96,7 @@ export default function BuildingDetailPage() {
                 Empreendimento não encontrado
               </h2>
               <p className="text-gray-600">
-                O empreendimento com ID "{buildingId}" não foi encontrado.
+                O empreendimento com ID &quot;{buildingId}&quot; não foi encontrado.
               </p>
             </div>
           </div>

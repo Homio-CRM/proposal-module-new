@@ -110,22 +110,7 @@ export default function PropertyDataStep({
           )}
         </div>
 
-        <div>
-          <label htmlFor="responsible" className="block text-sm font-medium text-neutral-700 mb-2">
-            Responsável *
-          </label>
-          <Input
-            id="responsible"
-            type="text"
-            value={formData.responsible}
-            onChange={(e) => handleInputChange('responsible', e.target.value)}
-            placeholder="Nome do responsável pela unidade"
-            className={errors['property.responsible'] ? 'border-red-500' : ''}
-          />
-          {errors['property.responsible'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['property.responsible']}</p>
-          )}
-        </div>
+        
 
         <div>
           <label htmlFor="reservedUntil" className="block text-sm font-medium text-neutral-700 mb-2">

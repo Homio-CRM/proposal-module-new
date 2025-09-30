@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./datepicker.css";
 import { UserDataProvider } from "@/lib/contexts/UserDataContext";
+import { CustomFieldsProvider } from "@/lib/contexts/CustomFieldsContext";
+import { AutoCustomFieldsLoader } from "@/components/AutoCustomFieldsLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +32,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <UserDataProvider>
-          {children}
+          <CustomFieldsProvider>
+            <AutoCustomFieldsLoader />
+            {children}
+          </CustomFieldsProvider>
         </UserDataProvider>
       </body>
     </html>

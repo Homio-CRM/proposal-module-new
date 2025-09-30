@@ -102,7 +102,11 @@ export function UnitsTable({
                 className={`group cursor-pointer transition-colors duration-150 ${
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 } hover:bg-gray-100`}
-                onClick={() => router.push(`/units/${unit.id}`)}
+                onClick={() => {
+                  // Note: buildingId should be passed as prop or extracted from unit data
+                  const buildingId = 'building-id' // This should be dynamic
+                  router.push(`/buildings/${buildingId}/${unit.id}`)
+                }}
               >
                 <td className="px-2 py-3 whitespace-nowrap w-10">
                   <Checkbox

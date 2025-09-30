@@ -82,6 +82,7 @@ export default function AdditionalContactStep({
     name: '',
     cpf: '',
     rg: '',
+    rgIssuer: '',
     nationality: '',
     maritalStatus: '',
     birthDate: '',
@@ -91,7 +92,8 @@ export default function AdditionalContactStep({
     zipCode: '',
     city: '',
     neighborhood: '',
-    state: ''
+    state: '',
+    profession: ''
   })
 
   useEffect(() => {
@@ -155,70 +157,6 @@ export default function AdditionalContactStep({
         </div>
 
         <div>
-          <label htmlFor="rg" className="block text-sm font-medium text-neutral-700 mb-2">
-            RG
-          </label>
-          <Input
-            id="rg"
-            type="text"
-            value={formData.rg}
-            onChange={(e) => handleInputChange('rg', e.target.value)}
-            placeholder="Digite o RG"
-            className={errors['additionalContact.rg'] ? 'border-red-500' : ''}
-          />
-          {errors['additionalContact.rg'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.rg']}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Second Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        <div>
-          <label htmlFor="nationality" className="block text-sm font-medium text-neutral-700 mb-2">
-            Nacionalidade
-          </label>
-          <Select
-            id="nationality"
-            value={formData.nationality}
-            onChange={(e) => handleInputChange('nationality', e.target.value)}
-            className={errors['additionalContact.nationality'] ? 'border-red-500' : ''}
-          >
-            <option value="">Selecione a nacionalidade</option>
-            {NATIONALITY_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          {errors['additionalContact.nationality'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.nationality']}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="maritalStatus" className="block text-sm font-medium text-neutral-700 mb-2">
-            Estado Civil
-          </label>
-          <Select
-            id="maritalStatus"
-            value={formData.maritalStatus}
-            onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
-            className={errors['additionalContact.maritalStatus'] ? 'border-red-500' : ''}
-          >
-            <option value="">Selecione o estado civil</option>
-            {MARITAL_STATUS_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          {errors['additionalContact.maritalStatus'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.maritalStatus']}</p>
-          )}
-        </div>
-
-        <div>
           <label htmlFor="birthDate" className="block text-sm font-medium text-neutral-700 mb-2">
             Data de Nascimento
           </label>
@@ -235,18 +173,86 @@ export default function AdditionalContactStep({
         </div>
       </div>
 
+      {/* Second Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div>
+          <label htmlFor="rg" className="block text-sm font-medium text-neutral-700 mb-2">
+            RG
+          </label>
+          <Input
+            id="rg"
+            type="text"
+            value={formData.rg}
+            onChange={(e) => handleInputChange('rg', e.target.value)}
+            placeholder="Digite o RG"
+            className={errors['additionalContact.rg'] ? 'border-red-500' : ''}
+          />
+          {errors['additionalContact.rg'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.rg']}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="rgIssuer" className="block text-sm font-medium text-neutral-700 mb-2">
+            Órgão Emissor do RG
+          </label>
+          <Input
+            id="rgIssuer"
+            type="text"
+            value={formData.rgIssuer}
+            onChange={(e) => handleInputChange('rgIssuer', e.target.value)}
+            placeholder="Ex.: SSP-SP"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="nationality" className="block text-sm font-medium text-neutral-700 mb-2">
+            Nacionalidade
+          </label>
+          <Input
+            id="nationality"
+            type="text"
+            value={formData.nationality}
+            onChange={(e) => handleInputChange('nationality', e.target.value)}
+            placeholder="Digite a nacionalidade"
+            className={errors['additionalContact.nationality'] ? 'border-red-500' : ''}
+          />
+          {errors['additionalContact.nationality'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.nationality']}</p>
+          )}
+        </div>
+      </div>
+
       {/* Third Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-            E-mail
+          <label htmlFor="maritalStatus" className="block text-sm font-medium text-neutral-700 mb-2">
+            Estado Civil
+          </label>
+          <Select
+            id="maritalStatus"
+            value={formData.maritalStatus}
+            onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
+          >
+            <option value="">Selecione o estado civil</option>
+            {MARITAL_STATUS_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label htmlFor="profession" className="block text-sm font-medium text-neutral-700 mb-2">
+            Profissão
           </label>
           <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            placeholder="Digite o e-mail"
+            id="profession"
+            type="text"
+            value={formData.profession || ''}
+            onChange={(e) => handleInputChange('profession', e.target.value)}
+            placeholder="Digite a profissão"
           />
         </div>
 
@@ -264,7 +270,10 @@ export default function AdditionalContactStep({
             maxLength={11}
           />
         </div>
+      </div>
 
+      {/* Fourth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="zipCode" className="block text-sm font-medium text-neutral-700 mb-2">
             CEP
@@ -279,10 +288,7 @@ export default function AdditionalContactStep({
             maxLength={8}
           />
         </div>
-      </div>
 
-      {/* Fourth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="address" className="block text-sm font-medium text-neutral-700 mb-2">
             Endereço
@@ -308,7 +314,10 @@ export default function AdditionalContactStep({
             placeholder="Digite a cidade"
           />
         </div>
+      </div>
 
+      {/* Fifth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="neighborhood" className="block text-sm font-medium text-neutral-700 mb-2">
             Bairro
@@ -321,10 +330,18 @@ export default function AdditionalContactStep({
             placeholder="Digite o bairro"
           />
         </div>
-      </div>
-
-      {/* Fifth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
+            E-mail
+          </label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="Digite o e-mail"
+          />
+        </div>
         <div>
           <label htmlFor="state" className="block text-sm font-medium text-neutral-700 mb-2">
             Estado

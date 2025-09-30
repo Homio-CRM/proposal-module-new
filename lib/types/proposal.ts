@@ -1,6 +1,8 @@
 export interface ProposalData {
   opportunityId: string
   proposalDate: string
+  proposalName?: string
+  responsible: string
   proposalType?: string
   proposalStatus?: string
   priority?: string
@@ -14,6 +16,7 @@ export interface ContactData {
   name: string
   cpf: string
   rg: string
+  rgIssuer: string
   nationality: string
   maritalStatus: string
   birthDate: string
@@ -21,9 +24,11 @@ export interface ContactData {
   phone: string
   address: string
   zipCode: string
+  postalCode?: string
   city: string
   neighborhood: string
   state: string
+  profession?: string
 }
 
 export interface PropertyData {
@@ -31,7 +36,6 @@ export interface PropertyData {
   unit: string
   floor: string
   tower: string
-  responsible: string
   reservedUntil: string
   observations: string
 }

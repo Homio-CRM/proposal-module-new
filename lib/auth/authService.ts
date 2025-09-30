@@ -56,7 +56,7 @@ export class AuthService {
 
             return sessionData
         } catch (error) {
-            console.error('❌ Erro ao inicializar sessão:', error)
+            console.error('Erro ao inicializar sessão:', error)
             throw error
         }
     }
@@ -148,7 +148,7 @@ export class AuthService {
             }
             return false
         } catch (error) {
-            console.error('❌ Erro ao verificar sessão:', error)
+            console.error('Erro ao verificar sessão:', error)
             return false
         }
     }
@@ -170,7 +170,7 @@ export class AuthService {
 
             return false
         } catch (error) {
-            console.error('❌ Erro ao garantir sessão:', error)
+            console.error('Erro ao garantir sessão:', error)
             return false
         }
     }

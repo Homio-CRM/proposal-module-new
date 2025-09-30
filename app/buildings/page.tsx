@@ -8,7 +8,7 @@ import { BuildingsFiltersSidebar } from "@/components/BuildingsFiltersSidebar";
 import { BuildingsTable } from "@/components/BuildingsTable";
 import { BuildingFilters } from "@/lib/types/building";
 import { mockBuildings } from "@/lib/mock/buildings";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function BuildingsPage() {
@@ -200,12 +200,19 @@ export default function BuildingsPage() {
               <h2 className="text-2xl font-bold text-neutral-900">Empreendimentos</h2>
               <p className="text-neutral-600">Gerencie seus empreendimentos e unidades</p>
             </div>
-            <Link href="/buildings/create">
-              <Button variant="default">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Empreendimento
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/buildings/create">
+                <Button variant="default">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Empreendimento
+                </Button>
+              </Link>
+              <Link href="/config">
+                <Button variant="outline" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {selectedBuildings.length > 0 && (
