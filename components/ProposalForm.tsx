@@ -591,6 +591,32 @@ export default function ProposalForm() {
                 }
               }))
             }}
+            onAdditionalContactPrefill={(contactData) => {
+              console.log('🔧 ProposalForm recebeu dados do contato adicional:', contactData)
+              setFormData(prev => ({
+                ...prev,
+                additionalContact: {
+                  ...(prev.additionalContact || {
+                    name: '',
+                    cpf: '',
+                    rg: '',
+                    rgIssuer: '',
+                    nationality: '',
+                    maritalStatus: '',
+                    birthDate: '',
+                    email: '',
+                    phone: '',
+                    address: '',
+                    zipCode: '',
+                    city: '',
+                    neighborhood: '',
+                    state: '',
+                    profession: ''
+                  }),
+                  ...contactData,
+                }
+              }))
+            }}
           />
         )
       case 2:

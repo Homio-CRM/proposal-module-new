@@ -14,6 +14,7 @@ interface ProposalDataStepProps {
   onDataChange: (data: ProposalData) => void
   errors?: Record<string, string>
   onPrimaryContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string }) => void
+  onAdditionalContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string }) => void
 }
 
 function normalizeMaritalStatus(value: unknown): string {
@@ -71,7 +72,8 @@ export default function ProposalDataStep({
   data, 
   onDataChange,
   errors = {},
-  onPrimaryContactPrefill
+  onPrimaryContactPrefill,
+  onAdditionalContactPrefill
 }: ProposalDataStepProps) {
   const [formData, setFormData] = useState<ProposalData>(data)
   
@@ -277,6 +279,111 @@ export default function ProposalDataStep({
                         onPrimaryContactPrefill(contactData)
                       }
                     }
+                  }
+
+                  // Buscar contato adicional nas relations (secundário)
+                  if (opp?.relations && Array.isArray(opp.relations)) {
+                    console.log('[AdditionalContact] relations:', opp.relations)
+                    const secondary = (opp.relations as Array<{ recordId?: string }>).
+                      find((rel) => typeof rel?.recordId === 'string' && rel.recordId !== opp.contactId)
+                    console.log('[AdditionalContact] chosen secondary recordId:', secondary?.recordId, 'primary contactId:', opp.contactId)
+                    if (secondary?.recordId) {
+                      const contactRes2 = await fetch(API_ENDPOINTS.OPERATIONS.GET_CONTACT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contactId: secondary.recordId, locationId })
+                      })
+                      console.log('[AdditionalContact] fetch status:', contactRes2.status)
+                      if (contactRes2.ok) {
+                        const payload2 = await contactRes2.json()
+                        const c2 = payload2?.contact ?? payload2
+                        console.log('[AdditionalContact] raw contact payload:', c2)
+                        const toTitleCase = (s: string) => s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        const rawName2 = c2?.fullNameLowerCase || [c2?.firstName, c2?.lastName].filter(Boolean).join(' ')
+                        const name2 = rawName2 ? toTitleCase(rawName2) : ''
+                        const email2 = c2?.email || c2?.emailLowerCase || ''
+                        const phone2 = c2?.phone || ''
+                        
+                        const contactFieldMappings2 = getAllMappings()
+                        const additionalData: Partial<ContactFormContactData> = {}
+                        
+                        if (name2) additionalData.name = name2
+                        if (email2) additionalData.email = email2
+                        if (phone2) additionalData.phone = phone2
+                        if (c2.postalCode) additionalData.zipCode = c2.postalCode
+                        if (c2.city) additionalData.city = c2.city
+                        if (c2.address1) additionalData.address = c2.address1
+                        if (c2.state) additionalData.state = c2.state
+                        if (c2.dateOfBirth) additionalData.birthDate = addOneDayISO(toISODateString(c2.dateOfBirth))
+                        
+                        if (c2.customFields && Array.isArray(c2.customFields)) {
+                          const contactCustomFields2: Record<string, string> = {}
+                          ;(c2.customFields as Array<Record<string, unknown>>).forEach((field) => {
+                            const id = String(field.id ?? '')
+                            if (!id) return
+                            const str = extractCustomFieldString(field)
+                            if (str !== null) contactCustomFields2[id] = str
+                          })
+                          console.log('[AdditionalContact] extracted custom field ids:', Object.keys(contactCustomFields2))
+                          
+                          contactFieldMappings2.contactFields.forEach(mapping => {
+                            const customFieldValue = contactCustomFields2[mapping.customFieldId]
+                            if (customFieldValue !== undefined && customFieldValue !== null) {
+                              switch (mapping.formField) {
+                                case 'cpf':
+                                  additionalData.cpf = String(customFieldValue)
+                                  break
+                                case 'rg':
+                                  additionalData.rg = String(customFieldValue)
+                                  break
+                                case 'orgaoEmissor':
+                                case 'rg__orgao_emissor':
+                                  additionalData.rgIssuer = String(customFieldValue)
+                                  break
+                                case 'nacionalidade':
+                                  additionalData.nationality = String(customFieldValue)
+                                  break
+                                case 'estadoCivil':
+                                case 'estado_civil':
+                                  const normalized2 = normalizeMaritalStatus(customFieldValue)
+                                  console.log('[AdditionalContact EstadoCivil] id:', mapping.customFieldId, 'raw:', customFieldValue, 'normalized:', normalized2)
+                                  additionalData.maritalStatus = normalized2
+                                  break
+                                case 'profissao':
+                                  additionalData.profession = String(customFieldValue)
+                                  break
+                                case 'cep':
+                                  additionalData.zipCode = String(customFieldValue)
+                                  break
+                                case 'endereco':
+                                  additionalData.address = String(customFieldValue)
+                                  break
+                                case 'cidade':
+                                  additionalData.city = String(customFieldValue)
+                                  break
+                                case 'bairro':
+                                  additionalData.neighborhood = String(customFieldValue)
+                                  break
+                                case 'estado':
+                                  additionalData.state = String(customFieldValue)
+                                  break
+                              }
+                            }
+                          })
+                        }
+                        
+                        console.log('[AdditionalContact] final payload to prefill:', additionalData)
+                        if (onAdditionalContactPrefill) {
+                          onAdditionalContactPrefill(additionalData)
+                        }
+                      } else {
+                        console.log('[AdditionalContact] fetch failed')
+                      }
+                    } else {
+                      console.log('[AdditionalContact] no secondary relation found')
+                    }
+                  } else {
+                    console.log('[AdditionalContact] no relations array on opportunity')
                   }
                 } catch (error) {
                   setOpportunityError('Erro ao buscar oportunidade')
