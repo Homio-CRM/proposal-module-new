@@ -57,21 +57,17 @@ export default function PropertyDataStep({
   const [selectedUnitStatus, setSelectedUnitStatus] = useState<string>('')
 
   useEffect(() => {
-    console.log('[PropertyDataStep] useEffect data mudou:', data)
     setFormData(data)
   }, [data])
 
   // Atualizar status da unidade e building selecionado quando formData.unitId muda
   useEffect(() => {
     if (formData.unitId && allUnits.length > 0) {
-      console.log('[PropertyDataStep] useEffect - formData.unitId mudou:', formData.unitId)
       const unitFromDb = allUnits.find(u => u.id === formData.unitId)
       if (unitFromDb) {
-        console.log('[PropertyDataStep] Unidade encontrada no useEffect:', unitFromDb)
         setSelectedUnitStatus(unitFromDb.status || '')
         setSelectedBuildingId(unitFromDb.buildingId)
       } else {
-        console.log('[PropertyDataStep] Unidade NÃO encontrada no useEffect:', formData.unitId)
       }
     }
   }, [formData.unitId, allUnits])
@@ -120,30 +116,18 @@ export default function PropertyDataStep({
           setAllUnits(mapped)
           
           // Definir building selecionado baseado no formData
-          console.log('[PropertyDataStep] Definindo building selecionado:', {
-            formDataBuildingId: formData.buildingId,
-            formDataUnitId: formData.unitId,
-            formDataDevelopment: formData.development
-          })
           
           if (formData.buildingId) {
-            console.log('[PropertyDataStep] Usando buildingId do formData:', formData.buildingId)
             setSelectedBuildingId(formData.buildingId)
           } else if (formData.unitId) {
-            console.log('[PropertyDataStep] Procurando unidade com ID:', formData.unitId)
-            console.log('[PropertyDataStep] Unidades disponíveis:', mapped.map(u => ({ id: u.id, name: u.name, status: u.status })))
             const currentUnit = mapped.find(unit => unit.id === formData.unitId)
             if (currentUnit) {
-              console.log('[PropertyDataStep] Unidade encontrada:', currentUnit)
-              console.log('[PropertyDataStep] Usando buildingId da unidade:', currentUnit.buildingId)
               setSelectedBuildingId(currentUnit.buildingId)
             } else {
-              console.log('[PropertyDataStep] ERRO: Unidade não encontrada com ID:', formData.unitId)
             }
           }
         }
       } catch (error) {
-        console.error('Erro ao carregar dados:', error)
       }
     }
     loadData()
@@ -160,7 +144,6 @@ export default function PropertyDataStep({
     
     const selectedUnit = allUnits.find(u => u.id === formData.unitId)
     if (selectedUnit && selectedUnit.status !== 'available') {
-      console.log('[PropertyDataStep] Incluindo unidade não disponível no select:', selectedUnit)
       // Incluir a unidade selecionada mesmo que não esteja disponível
       return [selectedUnit, ...availableUnits.filter(u => u.id !== formData.unitId)]
     }
@@ -174,14 +157,9 @@ export default function PropertyDataStep({
     : allUnits
 
   const handleBuildingChange = (buildingId: string) => {
-    console.log('[PropertyDataStep] handleBuildingChange chamado:', {
-      buildingId,
-      buildings: buildings.map(b => ({ id: b.id, name: b.name }))
-    })
     
     setSelectedBuildingId(buildingId)
     const building = buildings.find(b => b.id === buildingId)
-    console.log('[PropertyDataStep] Building encontrado:', building)
     
     const next: PropertyData = {
       ...formData,
@@ -192,20 +170,14 @@ export default function PropertyDataStep({
       tower: '',
       floor: ''
     }
-    console.log('[PropertyDataStep] Dados atualizados:', next)
     
     setFormData(next)
     onDataChange(next)
   }
 
   const handleUnitChange = (unitId: string) => {
-    console.log('[PropertyDataStep] handleUnitChange chamado:', {
-      unitId,
-      allUnits: allUnits.map(u => ({ id: u.id, name: u.name, number: u.number, buildingId: u.buildingId }))
-    })
     
     const selected = allUnits.find(u => u.id === unitId)
-    console.log('[PropertyDataStep] Unit selecionada:', selected)
     
     if (selected) {
       setSelectedBuildingId(selected.buildingId)
@@ -223,7 +195,6 @@ export default function PropertyDataStep({
         development: selected.buildingName,
         buildingId: selected.buildingId
       }
-      console.log('[PropertyDataStep] Dados atualizados após seleção de unidade:', next)
       
       setFormData(next)
       onDataChange(next)
@@ -249,12 +220,6 @@ export default function PropertyDataStep({
           <Select 
             value={formData.buildingId || selectedBuildingId} 
             onChange={(e) => {
-              console.log('[PropertyDataStep] Select onChange triggered:', {
-                newValue: e.target.value,
-                currentValue: formData.buildingId || selectedBuildingId,
-                formDataBuildingId: formData.buildingId,
-                selectedBuildingId: selectedBuildingId
-              })
               handleBuildingChange(e.target.value)
             }}
             className={cn("w-full", errors['property.development'] && 'border-red-500')}
@@ -278,11 +243,6 @@ export default function PropertyDataStep({
           <Select 
             value={formData.unitId || ''} 
             onChange={(e) => {
-              console.log('[PropertyDataStep] Unit Select onChange triggered:', {
-                newValue: e.target.value,
-                currentValue: formData.unitId,
-                availableUnits: filteredUnits.map(u => ({ id: u.id, name: u.name, number: u.number }))
-              })
               handleUnitChange(e.target.value)
             }}
             className={cn("w-full", errors['property.unit'] && 'border-red-500')}

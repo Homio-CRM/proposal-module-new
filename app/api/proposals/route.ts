@@ -21,7 +21,6 @@ export async function OPTIONS() {
 export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json()
-		console.log('[api/proposals] Incoming body:', JSON.stringify(body))
 		const {
 			agencyId,
 			opportunityId,
@@ -58,13 +57,11 @@ export async function POST(req: NextRequest) {
 		if (!unitId && !unit?.floor) missing.push('unitId or unit.floor')
 		if (!primaryContact?.name) missing.push('primaryContact.name')
 		if (missing.length) {
-			console.log('[api/proposals] Missing fields:', missing)
 			return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
 		}
 
 		let resolvedUnitId: string | null = null
 		if (unitId) {
-			console.log('[api/proposals] Verifying unitId ownership:', unitId)
 			const { data: verify, error: verifyErr } = await supabaseAdmin
 				.from('units')
 				.select('id')
@@ -76,7 +73,6 @@ export async function POST(req: NextRequest) {
 			}
 			resolvedUnitId = verify.id as string
 		} else if (unit) {
-			console.log('[api/proposals] Resolving unit with:', { number: unit.number, tower: unit.tower, floor: unit.floor, agencyId })
 			const { data: unitRow, error: unitErr } = await supabaseAdmin
 				.from('units')
 				.select('id')
@@ -86,7 +82,6 @@ export async function POST(req: NextRequest) {
 				.eq('agency_id', agencyId)
 				.single()
 			if (unitErr || !unitRow) {
-				console.log('[api/proposals] Unit not found:', { error: unitErr?.message, number: unit.number, tower: unit.tower, floor: unit.floor, agencyId })
 				return NextResponse.json({ error: 'Unit not found', criteria: { number: unit.number, tower: unit.tower, floor: unit.floor, agencyId } }, { status: 404 })
 			}
 			resolvedUnitId = unitRow.id as string
@@ -94,7 +89,6 @@ export async function POST(req: NextRequest) {
 
 		const upsertContact = async (c?: { homioId?: string; name: string } | null) => {
 			if (!c || !c.name) return null as string | null
-			console.log('[api/proposals] Upserting contact:', { homioId: c.homioId, name: c.name })
 			
 			// Se não temos homioId, buscar por nome para evitar duplicatas
 			const searchKey = c.homioId || c.name
@@ -104,7 +98,6 @@ export async function POST(req: NextRequest) {
 				.eq('homio_id', searchKey)
 				.single()
 			if (found?.id) {
-				console.log('[api/proposals] Contact exists:', found.id)
 				return found.id as string
 			}
 			
@@ -118,17 +111,14 @@ export async function POST(req: NextRequest) {
 				.select('id')
 				.single()
 			if (insertErr || !inserted) {
-				console.log('[api/proposals] Contact insert error:', insertErr)
 				throw insertErr || new Error('Failed to upsert contact')
 			}
-			console.log('[api/proposals] Contact inserted:', inserted.id)
 			return inserted.id as string
 		}
 
 		const primaryContactId = await upsertContact(primaryContact)
 		const secondaryContactId = await upsertContact(secondaryContact ?? null)
 
-		console.log('[api/proposals] Inserting proposal')
 		const { data: proposal, error: proposalErr } = await supabaseAdmin
 			.from('proposals')
 			.insert({
@@ -147,7 +137,6 @@ export async function POST(req: NextRequest) {
 			.single()
 
     if (proposalErr || !proposal) {
-      console.log('[api/proposals] Proposal insert error:', proposalErr)
       return NextResponse.json({ 
         error: 'Failed to create proposal',
         supabase: {
@@ -160,7 +149,6 @@ export async function POST(req: NextRequest) {
     }
 
 		if (Array.isArray(installments) && installments.length > 0) {
-			console.log('[api/proposals] Inserting installments count:', installments.length)
 			const payload = installments.map(i => ({
 				type: i.type,
 				amount_per_installment: i.amountPerInstallment,
@@ -173,7 +161,6 @@ export async function POST(req: NextRequest) {
 				.from('installments')
 				.insert(payload)
     if (instErr) {
-      console.log('[api/proposals] Installments insert error:', instErr)
       return NextResponse.json({ 
         error: 'Failed to insert installments',
         supabase: {
@@ -188,7 +175,6 @@ export async function POST(req: NextRequest) {
 
 		// Reservar unidade se reservedUntil estiver preenchido
 		if (reservedUntil && resolvedUnitId) {
-			console.log('[api/proposals] Reserving unit:', resolvedUnitId)
 			const { error: unitUpdateErr } = await supabaseAdmin
 				.from('units')
 				.update({ 
@@ -198,19 +184,9 @@ export async function POST(req: NextRequest) {
 				.eq('id', resolvedUnitId)
 				.eq('agency_id', agencyId)
 
-			if (unitUpdateErr) {
-				console.log('[api/proposals] Unit reservation error:', unitUpdateErr)
-				// Não falhar a proposta se não conseguir reservar a unidade
-				// Apenas logar o erro
-			} else {
-				console.log('[api/proposals] Unit reserved successfully:', resolvedUnitId)
-			}
 		}
-
-		console.log('[api/proposals] Success id:', proposal.id)
 		return NextResponse.json({ id: proposal.id })
 	} catch (error) {
-		console.log('[api/proposals] Unexpected error:', error)
 		return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
 	}
 } 

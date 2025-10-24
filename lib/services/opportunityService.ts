@@ -18,7 +18,6 @@ class OpportunityService {
     contact: ContactData | null
   }> {
     try {
-      console.log('🔍 Buscando oportunidade com custom fields:', opportunityId)
       
       const supabase = await getSupabase()
       
@@ -30,7 +29,6 @@ class OpportunityService {
         .single()
 
       if (oppError) {
-        console.error('❌ Erro ao buscar oportunidade:', oppError)
         return { opportunity: null, contact: null }
       }
 
@@ -61,18 +59,12 @@ class OpportunityService {
         customFields: opportunityCustomFields
       }
 
-      console.log('✅ Dados da oportunidade carregados:', {
-        opportunity: opportunityData,
-        contact: contact
-      })
-
       return {
         opportunity: opportunityData,
         contact: contact
       }
 
     } catch (error) {
-      console.error('❌ Erro ao buscar oportunidade:', error)
       return { opportunity: null, contact: null }
     }
   }
@@ -88,51 +80,29 @@ class OpportunityService {
     opportunityFormData: Record<string, string | number | boolean | null>
     contactFormData: Record<string, string | number | boolean | null>
   }> {
-    console.log('🔄 Mapeando custom fields para formulário...')
-    console.log('📊 Dados recebidos:')
-    console.log('- Opportunity data:', opportunityData)
-    console.log('- Contact data:', contactData)
-    console.log('- Field mappings:', fieldMappings)
     
     const opportunityFormData: Record<string, string | number | boolean | null> = {}
     const contactFormData: Record<string, string | number | boolean | null> = {}
 
     // Mapear opportunity fields
-    console.log('🔍 Mapeando opportunity fields...')
     fieldMappings.opportunityFields.forEach(mapping => {
-      console.log(`🔍 Verificando mapping: ${mapping.formField} -> ${mapping.customFieldId}`)
       const customFieldValue = opportunityData.customFields[mapping.customFieldId]
-      console.log(`🔍 Valor encontrado: ${customFieldValue}`)
       
       if (customFieldValue !== undefined && customFieldValue !== null) {
         opportunityFormData[mapping.formField] = customFieldValue
-        console.log(`✅ Opportunity: ${mapping.formField} = ${customFieldValue}`)
-      } else {
-        console.log(`⚠️ Opportunity: ${mapping.formField} não encontrado ou vazio`)
       }
     })
 
     // Mapear contact fields
     if (contactData) {
-      console.log('🔍 Mapeando contact fields...')
       fieldMappings.contactFields.forEach(mapping => {
-        console.log(`🔍 Verificando mapping: ${mapping.formField} -> ${mapping.customFieldId}`)
         const customFieldValue = contactData.customFields[mapping.customFieldId]
-        console.log(`🔍 Valor encontrado: ${customFieldValue}`)
         
         if (customFieldValue !== undefined && customFieldValue !== null) {
           contactFormData[mapping.formField] = customFieldValue
-          console.log(`✅ Contact: ${mapping.formField} = ${customFieldValue}`)
-        } else {
-          console.log(`⚠️ Contact: ${mapping.formField} não encontrado ou vazio`)
         }
       })
     }
-
-    console.log('🎯 Formulário mapeado:', {
-      opportunityFormData,
-      contactFormData
-    })
 
     return {
       opportunityFormData,

@@ -79,26 +79,19 @@ export default function ConfigPage() {
   useEffect(() => {
     const loadAgencyConfig = async () => {
       if (!userData?.activeLocation) {
-        console.log('⚠️ userData ou activeLocation não disponível:', { userData, activeLocation: userData?.activeLocation });
         return;
       }
-      
-      console.log('🔄 Iniciando carregamento da configuração da agência...');
-      console.log('📍 Location ID:', userData.activeLocation);
       
       try {
         setConfigLoading(true);
         
         // 1. Carregar configuração primeiro (sem custom fields)
-        console.log('🚀 Carregando configuração da agência...');
         const config = await dataService.fetchAgencyConfigOnly(userData.activeLocation);
         
         if (!config) {
-          console.log('⚠️ Nenhuma configuração encontrada para a agência');
           return;
         }
 
-        console.log('✅ Configuração carregada:', config);
         setAgencyConfig(config);
         
         // Preencher campos imediatamente
@@ -126,29 +119,23 @@ export default function ConfigPage() {
             estado: config.state || ''
           }
         };
-        console.log('📝 Dados configurados:', newConfigData);
         setConfigData(newConfigData);
 
         // 2. Buscar custom field IDs em background (não bloquear)
-        console.log('🔄 Buscando custom field IDs em background...');
         dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, config)
           .then(customFieldIds => {
-            console.log('🎯 Custom field IDs carregados:', customFieldIds);
             setCustomFieldIdsRef.current(customFieldIds);
           })
           .catch(error => {
-            console.error('❌ Erro ao carregar custom field IDs:', error);
           });
 
       } catch (error) {
-        console.error('❌ Erro ao carregar configuração da agência:', error);
       } finally {
         setConfigLoading(false);
       }
     };
 
     if (userData && !loading) {
-      console.log('🚀 Carregando configuração da agência...');
       loadAgencyConfig();
     }
   }, [userData, loading]);
@@ -165,12 +152,10 @@ export default function ConfigPage() {
 
   const handleSave = async () => {
     if (!userData?.activeLocation) {
-      console.error('❌ Location ID não disponível')
       return
     }
 
     try {
-      console.log('💾 Salvando configurações:', configData)
       setConfigLoading(true)
 
       // Salvar configuração e remapear custom fields
@@ -183,9 +168,6 @@ export default function ConfigPage() {
       setAgencyConfig(result.config)
       setCustomFieldIds(result.customFieldIds)
 
-      console.log('✅ Configurações salvas com sucesso!')
-      console.log('🆔 Novos custom field IDs:', result.customFieldIds)
-      
       // Mostrar modal de sucesso
       setShowSuccessModal(true)
     } catch (error) {

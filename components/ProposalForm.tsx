@@ -700,14 +700,12 @@ export default function ProposalForm() {
     }
 
     try {
-      console.log('[ProposalForm] Submitting payload:', payload)
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       const data = await res.json().catch(() => null)
-      console.log('[ProposalForm] Server response:', res.status, data)
       if (!res.ok) {
         setServerError(typeof (data as Record<string, unknown>)?.error === 'string' ? (data as Record<string, unknown>).error as string : 'Erro ao salvar')
         setServerDetails((data as Record<string, unknown>) ?? null)
@@ -716,7 +714,6 @@ export default function ProposalForm() {
       }
       setShowSuccessModal(true)
     } catch (e) {
-      console.log('[ProposalForm] Network error:', e)
       setServerError('Falha de rede')
       setServerDetails(null)
       setShowErrorModal(true)
@@ -766,8 +763,6 @@ export default function ProposalForm() {
               }))
             }}
             onPropertyPrefill={(propertyData) => {
-              console.log('[ProposalForm] onPropertyPrefill chamado:', propertyData)
-              console.log('[ProposalForm] Dados de property atuais:', formData.property)
               
               const updatedProperty = {
                 ...formData.property,
@@ -776,14 +771,12 @@ export default function ProposalForm() {
                 unitId: propertyData.unitId,
               }
               
-              console.log('[ProposalForm] Property atualizado:', updatedProperty)
               
               setFormData(prev => {
                 const newFormData = {
                   ...prev,
                   property: updatedProperty,
                 }
-                console.log('[ProposalForm] FormData completo atualizado:', newFormData)
                 return newFormData
               })
             }}

@@ -12,7 +12,6 @@ export function useOpportunityData() {
       setLoading(true)
       setError(null)
 
-      console.log('🚀 Carregando dados da oportunidade:', opportunityId)
 
       // 1. Buscar dados da oportunidade
       const { opportunity, contact } = await opportunityService.fetchOpportunityWithCustomFields(opportunityId)
@@ -30,13 +29,6 @@ export function useOpportunityData() {
         contact,
         fieldMappings
       )
-
-      console.log('✅ Dados carregados com sucesso:', {
-        opportunity,
-        contact,
-        opportunityFormData,
-        contactFormData
-      })
 
       return {
         opportunity,
