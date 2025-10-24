@@ -3,13 +3,13 @@ import { getSupabase } from '@/lib/supabaseClient'
 export interface OpportunityData {
   id: string
   name: string
-  customFields: Record<string, any>
+  customFields: Record<string, string | number | boolean | null>
 }
 
 export interface ContactData {
   id: string
   name: string
-  customFields: Record<string, any>
+  customFields: Record<string, string | number | boolean | null>
 }
 
 class OpportunityService {
@@ -85,8 +85,8 @@ class OpportunityService {
       contactFields: Array<{ formField: string; customFieldId: string; customFieldName: string }>
     }
   ): Promise<{
-    opportunityFormData: Record<string, any>
-    contactFormData: Record<string, any>
+    opportunityFormData: Record<string, string | number | boolean | null>
+    contactFormData: Record<string, string | number | boolean | null>
   }> {
     console.log('🔄 Mapeando custom fields para formulário...')
     console.log('📊 Dados recebidos:')
@@ -94,8 +94,8 @@ class OpportunityService {
     console.log('- Contact data:', contactData)
     console.log('- Field mappings:', fieldMappings)
     
-    const opportunityFormData: Record<string, any> = {}
-    const contactFormData: Record<string, any> = {}
+    const opportunityFormData: Record<string, string | number | boolean | null> = {}
+    const contactFormData: Record<string, string | number | boolean | null> = {}
 
     // Mapear opportunity fields
     console.log('🔍 Mapeando opportunity fields...')

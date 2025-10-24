@@ -9,7 +9,6 @@ import {
   User, 
   Building, 
   CreditCard, 
-  Calendar,
   FileText,
   Send
 } from 'lucide-react'
@@ -79,6 +78,10 @@ export default function SummaryStep({ data, onPublish }: SummaryStepProps) {
             <div>
               <label className="text-sm font-medium text-neutral-600">Data da Proposta</label>
               <p className="text-neutral-900 font-medium">{formatDate(data.proposal.proposalDate)}</p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium text-neutral-600">Responsável</label>
+              <p className="text-neutral-900 font-medium">{data.proposal.responsible}</p>
             </div>
           </div>
         </CardContent>
@@ -175,16 +178,14 @@ export default function SummaryStep({ data, onPublish }: SummaryStepProps) {
               <p className="text-neutral-900 font-medium">{data.property.floor}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-neutral-600">Torre</label>
+            <label className="text-sm font-medium text-neutral-600">Torre</label>
               <p className="text-neutral-900 font-medium">{data.property.tower}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-neutral-600">Responsável</label>
-              <p className="text-neutral-900 font-medium">{data.property.responsible}</p>
-            </div>
-            <div>
               <label className="text-sm font-medium text-neutral-600">Reservado até</label>
-              <p className="text-neutral-900 font-medium">{formatDate(data.property.reservedUntil)}</p>
+              <p className="text-neutral-900 font-medium">
+                {data.property.reservedUntil ? formatDate(data.property.reservedUntil) : 'Não informado'}
+              </p>
             </div>
             {data.property.observations && (
               <div className="md:col-span-2">
@@ -206,7 +207,7 @@ export default function SummaryStep({ data, onPublish }: SummaryStepProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {data.installments.map((installment, index) => (
+            {data.installments.map((installment) => (
               <div key={installment.id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <Badge variant="outline" className="capitalize">

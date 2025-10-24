@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,26 +22,60 @@ export default function ProposalsPage() {
   const [selectedProposals, setSelectedProposals] = useState<string[]>([]);
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [proposalsLoading, setProposalsLoading] = useState(true);
+  const developmentOptions = useMemo(() => {
+    const set = new Set<string>([''])
+    proposals.forEach(p => {
+      if (p.development) set.add(p.development)
+    })
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map(value => ({ value, label: value || 'Selecione o empreendimento...' }))
+  }, [proposals])
+
+  const unitOptions = useMemo(() => {
+    const set = new Set<string>([''])
+    proposals.forEach(p => {
+      if (p.unit) set.add(p.unit)
+    })
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map(value => ({ value, label: value || 'Selecione a unidade...' }))
+  }, [proposals])
+
+  const loadProposals = useCallback(async () => {
+    if (!userData?.companyId) return;
+    
+    try {
+      setProposalsLoading(true);
+      const proposalsData = await dataService.fetchProposalsData(userData.companyId);
+      setProposals(proposalsData);
+    } catch (error) {
+      console.error('Erro ao carregar propostas:', error);
+    } finally {
+      setProposalsLoading(false);
+    }
+  }, [userData?.companyId]);
 
   useEffect(() => {
-    const loadProposals = async () => {
-      if (!userData?.companyId) return;
-      
-      try {
-        setProposalsLoading(true);
-        const proposalsData = await dataService.fetchProposalsData(userData.companyId);
-        setProposals(proposalsData);
-      } catch (error) {
-        console.error('Erro ao carregar propostas:', error);
-      } finally {
-        setProposalsLoading(false);
-      }
-    };
-
     if (userData && !loading) {
       loadProposals();
     }
-  }, [userData, loading]);
+  }, [userData, loading, loadProposals]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      // Recarregar propostas quando a página recebe foco (usuário volta de outra página)
+      if (userData?.companyId && !loading) {
+        loadProposals();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [userData, loading, loadProposals]);
 
   const filteredProposals = useMemo(() => {
     return proposals
@@ -82,7 +116,25 @@ export default function ProposalsPage() {
 
   const handleCopy = () => {};
 
-  const handleDelete = () => {};
+  const handleDelete = async (proposalId: string) => {
+    if (!userData?.companyId) return;
+    
+    try {
+      await dataService.deleteProposal(proposalId);
+      
+      // Clear cache and reload proposals
+      dataService.clearProposalsCache(userData.companyId);
+      const proposalsData = await dataService.fetchProposalsData(userData.companyId);
+      setProposals(proposalsData);
+      
+      // Remove from selected if it was selected
+      setSelectedProposals(prev => prev.filter(id => id !== proposalId));
+      
+    } catch (error) {
+      console.error('Erro ao deletar proposta:', error);
+      // TODO: Show error toast/notification
+    }
+  };
 
   const handleView = () => {};
 
@@ -225,6 +277,8 @@ export default function ProposalsPage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           onClearFilters={handleClearFilters}
+          developmentOptions={developmentOptions}
+          unitOptions={unitOptions}
         />
 
         <div className="flex-1 p-6 overflow-visible min-w-0">

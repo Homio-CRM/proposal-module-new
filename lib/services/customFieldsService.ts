@@ -8,6 +8,10 @@ interface CustomField {
   options?: string[]
 }
 
+interface CustomFieldsResponse {
+  customFields: CustomField[]
+}
+
 
 class CustomFieldsService {
   async fetchCustomFields(locationId: string, model: 'opportunity' | 'contact'): Promise<CustomField[]> {
@@ -26,17 +30,17 @@ class CustomFieldsService {
         throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const data: CustomFieldsResponse = await response.json()
 
       if (!data.customFields || !Array.isArray(data.customFields)) {
         return []
       }
 
       // Filtrar apenas os custom fields do modelo específico
-      const filteredFields = data.customFields.filter(field => field.model === model)
+      const filteredFields = data.customFields.filter((field: CustomField) => field.model === model)
 
       return filteredFields
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`❌ Erro ao buscar custom fields para ${model}:`, error)
       return []
     }
@@ -68,7 +72,9 @@ class CustomFieldsService {
         'andar': 'andar',
         'torre': 'torre',
         'opportunityresponsavel': 'responsavel',
-        'observacoes': 'observacoes'
+        'observacoes': 'observacoes',
+        'reserve_until': 'reserve_until',
+        'reservar_at': 'reserve_until'
       }
 
       const contactFieldMapping: Record<string, string> = {
@@ -86,11 +92,11 @@ class CustomFieldsService {
       }
 
       // Processar opportunity fields
-      opportunityKeys.forEach(key => {
+      opportunityKeys.forEach((key: string) => {
         if (key && key.trim()) {
           // Procurar por fieldKey que corresponde a opportunity.[key]
           const fieldKey = `opportunity.${key}`
-          const field = opportunityFields.find(f => f.fieldKey === fieldKey)
+          const field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
           if (field) {
             const formFieldName = opportunityFieldMapping[key] || key
             opportunityFieldIds[formFieldName] = field.id
@@ -99,11 +105,11 @@ class CustomFieldsService {
       })
 
       // Processar contact fields
-      contactKeys.forEach(key => {
+      contactKeys.forEach((key: string) => {
         if (key && key.trim()) {
           // Procurar por fieldKey que corresponde a contact.[key]
           const fieldKey = `contact.${key}`
-          const field = contactFields.find(f => f.fieldKey === fieldKey)
+          const field = contactFields.find((f: CustomField) => f.fieldKey === fieldKey)
           if (field) {
             const formFieldName = contactFieldMapping[key] || key
             contactFieldIds[formFieldName] = field.id
@@ -115,7 +121,7 @@ class CustomFieldsService {
         opportunityFields: opportunityFieldIds,
         contactFields: contactFieldIds
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Erro ao buscar IDs dos custom fields:', error)
       return {
         opportunityFields: {},

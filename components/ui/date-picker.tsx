@@ -21,7 +21,7 @@ interface DatePickerProps {
   error?: boolean
 }
 
-const CustomDatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
+const CustomDatePicker = forwardRef<HTMLButtonElement, DatePickerProps>(
   ({ 
     value, 
     onChange, 
@@ -30,8 +30,7 @@ const CustomDatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     disabled = false,
     minDate,
     maxDate,
-    error = false,
-    ...props 
+    error = false
   }, ref) => {
     const [open, setOpen] = useState(false)
 
@@ -69,7 +68,7 @@ const CustomDatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             }}
             locale={ptBR}
             disabled={(date) =>
-              (minDate && date < minDate) || (maxDate && date > maxDate)
+              Boolean((minDate && date < minDate) || (maxDate && date > maxDate))
             }
             initialFocus
           />

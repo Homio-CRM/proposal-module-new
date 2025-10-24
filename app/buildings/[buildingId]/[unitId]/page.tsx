@@ -1,34 +1,74 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UnitDetails } from '@/components/UnitDetails'
-import { mockBuildingsWithUnits } from '@/lib/mock/buildings'
+import { ProposalTable } from '@/components/ProposalTable'
+import type { ProposalListItem } from '@/lib/types/proposal'
+import { dataService } from '@/lib/services/dataService'
+import { buildingService } from '@/lib/services/buildingService'
+import { BuildingWithUnits } from '@/lib/types/building'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 
 export default function UnitDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const [building, setBuilding] = useState<BuildingWithUnits | null>(null)
+  const [buildingLoading, setBuildingLoading] = useState(true)
+  const [buildingError, setBuildingError] = useState<string | null>(null)
+  const [unitProposals, setUnitProposals] = useState<ProposalListItem[]>([])
+  const [unitProposalsLoading, setUnitProposalsLoading] = useState<boolean>(false)
   
   const buildingId = params.buildingId as string
   const unitId = params.unitId as string
+
+  useEffect(() => {
+    const fetchBuilding = async () => {
+      if (!userData?.activeLocation || !buildingId) return;
+      
+      setBuildingLoading(true);
+      setBuildingError(null);
+      
+      try {
+        const data = await buildingService.fetchBuildingWithUnits(buildingId, userData.activeLocation);
+        setBuilding(data);
+      } catch (err) {
+        setBuildingError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      } finally {
+        setBuildingLoading(false);
+      }
+    };
+
+    fetchBuilding();
+  }, [buildingId, userData?.activeLocation]);
+
+  useEffect(() => {
+    const fetchProposals = async () => {
+      if (!unitId) return
+      setUnitProposalsLoading(true)
+      try {
+        const proposals = await dataService.fetchProposalsByUnit(unitId)
+        setUnitProposals(proposals)
+      } catch {
+      } finally {
+        setUnitProposalsLoading(false)
+      }
+    }
+    fetchProposals()
+  }, [unitId])
   
-  // Find the building first
-  const building = mockBuildingsWithUnits.find(b => b.id === buildingId)
-  
-  // Then find the unit within that building
   const unit = building?.units.find(u => u.id === unitId)
   
-  // Create unitWithBuilding object
   const unitWithBuilding = unit && building ? {
     ...unit,
     building
   } : null
 
-  if (loading) {
+  if (loading || buildingLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-6xl mx-auto p-6">
@@ -62,12 +102,12 @@ export default function UnitDetailPage() {
     )
   }
 
-  if (error) {
+  if (error || buildingError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">❌</div>
-          <p className="text-red-600">Erro: {error}</p>
+          <p className="text-red-600">Erro: {error || buildingError}</p>
         </div>
       </div>
     )
@@ -91,7 +131,7 @@ export default function UnitDetailPage() {
           <div className="flex items-center gap-4 mb-6">
             <Button
               variant="outline"
-              onClick={() => router.push('/buildings')}
+              onClick={() => router.push(`/buildings/${buildingId}`)}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -106,7 +146,7 @@ export default function UnitDetailPage() {
                 Unidade não encontrada
               </h2>
               <p className="text-gray-600">
-                A unidade "{unitId}" no empreendimento "{buildingId}" não foi encontrada.
+                A unidade solicitada não foi encontrada.
               </p>
             </div>
           </div>
@@ -124,7 +164,7 @@ export default function UnitDetailPage() {
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
-                onClick={() => router.push('/buildings')}
+                onClick={() => router.push(`/buildings/${buildingId}`)}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -135,7 +175,7 @@ export default function UnitDetailPage() {
                   Unidade {unitWithBuilding.number}
                 </h1>
                 <p className="text-gray-600">
-                  ID: {unitWithBuilding.id} • {unitWithBuilding.building.name}
+                  {unitWithBuilding.building.name}
                 </p>
               </div>
             </div>
@@ -143,6 +183,31 @@ export default function UnitDetailPage() {
 
           {/* Unit Details */}
           <UnitDetails unitWithBuilding={unitWithBuilding} />
+
+          {/* Proposals for this Unit */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">Propostas desta unidade</h2>
+            {unitProposalsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : unitProposals.length === 0 ? (
+              <p className="text-gray-600">Nenhuma proposta para esta unidade.</p>
+            ) : (
+              <ProposalTable
+                proposals={unitProposals}
+                onCopy={() => {}}
+                onDelete={() => {}}
+                onView={() => {}}
+                selectedProposals={[]}
+                onSelectProposal={() => {}}
+                onSelectAll={() => {}}
+                onBulkDelete={() => {}}
+                showUnitColumn={false}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

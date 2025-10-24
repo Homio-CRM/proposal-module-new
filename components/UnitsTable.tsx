@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Unit } from '@/lib/types/building'
-import { Trash2, Home, Building2, MapPin, FileText } from 'lucide-react'
+import { Trash2, Home, Building2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface UnitWithBuilding extends Unit {
@@ -16,32 +16,22 @@ interface UnitWithBuilding extends Unit {
 
 interface UnitsTableProps {
   units: UnitWithBuilding[]
-  onCopy: (id: string) => void
   onDelete: (id: string) => void
-  onView: (id: string) => void
   selectedUnits: string[]
   onSelectUnit: (id: string, selected: boolean) => void
   onSelectAll: () => void
-  onBulkDelete: () => void
 }
 
 export function UnitsTable({ 
   units, 
-  onCopy, 
   onDelete, 
-  onView, 
   selectedUnits, 
   onSelectUnit, 
-  onSelectAll, 
-  onBulkDelete 
+  onSelectAll
 }: UnitsTableProps) {
   const router = useRouter()
   
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('pt-BR')
-  }
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -103,9 +93,7 @@ export function UnitsTable({
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 } hover:bg-gray-100`}
                 onClick={() => {
-                  // Note: buildingId should be passed as prop or extracted from unit data
-                  const buildingId = 'building-id' // This should be dynamic
-                  router.push(`/buildings/${buildingId}/${unit.id}`)
+                  router.push(`/buildings/${unit.building_id}/${unit.id}`)
                 }}
               >
                 <td className="px-2 py-3 whitespace-nowrap w-10">
@@ -128,7 +116,7 @@ export function UnitsTable({
                         Unidade {unit.number}
                       </div>
                       <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors duration-150">
-                        {unit.floor}° andar{unit.tower ? ` • Torre ${unit.tower}` : ''}
+                        {unit.floor ? `${unit.floor}° andar` : ''}{unit.floor && unit.tower ? ' • ' : ''}{unit.tower ? `Torre ${unit.tower}` : ''}
                       </div>
                     </div>
                   </div>

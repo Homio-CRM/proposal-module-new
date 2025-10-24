@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ProposalListItem, ProposalStatus } from '@/lib/types/proposal'
+import { getStatusBadgeVariant, getStatusLabel } from '@/lib/utils/proposalStatus'
 import { Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -16,6 +17,7 @@ interface ProposalTableProps {
   onSelectProposal: (id: string, selected: boolean) => void
   onSelectAll: () => void
   onBulkDelete: () => void
+  showUnitColumn?: boolean
 }
 
 export function ProposalTable({ 
@@ -26,7 +28,8 @@ export function ProposalTable({
   selectedProposals, 
   onSelectProposal, 
   onSelectAll, 
-  onBulkDelete 
+  onBulkDelete,
+  showUnitColumn = true
 }: ProposalTableProps) {
   const router = useRouter()
   const formatDate = (dateString: string) => {
@@ -41,31 +44,6 @@ export function ProposalTable({
     }).format(price)
   }
 
-  const getStatusBadgeVariant = (status: ProposalStatus) => {
-    switch (status) {
-      case 'em_analise':
-        return 'warning'
-      case 'aprovada':
-        return 'success'
-      case 'negada':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
-  const getStatusLabel = (status: ProposalStatus) => {
-    switch (status) {
-      case 'em_analise':
-        return 'Em Análise'
-      case 'aprovada':
-        return 'Aprovada'
-      case 'negada':
-        return 'Negada'
-      default:
-        return status
-    }
-  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -86,9 +64,11 @@ export function ProposalTable({
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">
                 Status
               </th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
-                Unidade
-              </th>
+              {showUnitColumn && (
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+                  Unidade
+                </th>
+              )}
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
                 Contato Principal
               </th>
@@ -126,7 +106,7 @@ export function ProposalTable({
                     {proposal.title}
                   </div>
                   <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors duration-150">
-                    Oportunidade: {proposal.id}
+                    Oportunidade: {proposal.opportunityId || 'N/A'}
                   </div>
                 </td>
                 <td className="px-2 py-3 whitespace-nowrap min-w-[90px]">
@@ -134,12 +114,14 @@ export function ProposalTable({
                     {getStatusLabel(proposal.status)}
                   </Badge>
                 </td>
-                <td className="px-2 py-3 whitespace-nowrap text-sm text-neutral-900 min-w-[140px]">
-                  {proposal.unit && proposal.development 
-                    ? `${proposal.unit} - ${proposal.development}`
-                    : proposal.development || proposal.unit || 'N/A'
-                  }
-                </td>
+                {showUnitColumn && (
+                  <td className="px-2 py-3 whitespace-nowrap text-sm text-neutral-900 min-w-[140px]">
+                    {proposal.unit && proposal.development 
+                      ? `${proposal.unit} - ${proposal.development}`
+                      : proposal.development || proposal.unit || 'N/A'
+                    }
+                  </td>
+                )}
                 <td className="px-2 py-3 whitespace-nowrap text-sm text-neutral-900 min-w-[110px]">
                   {proposal.primaryContactName}
                 </td>

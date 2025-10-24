@@ -1,24 +1,47 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BuildingDetails } from '@/components/BuildingDetails'
-import { mockBuildingsWithUnits } from '@/lib/mock/buildings'
+import { buildingService } from '@/lib/services/buildingService'
+import { BuildingWithUnits, UnitStatus } from '@/lib/types/building'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
 
 export default function BuildingDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const [building, setBuilding] = useState<BuildingWithUnits | null>(null)
+  const [buildingLoading, setBuildingLoading] = useState(true)
+  const [buildingError, setBuildingError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<UnitStatus | 'all'>('all')
   
   const buildingId = params.buildingId as string
-  
-  // Find the building
-  const building = mockBuildingsWithUnits.find(b => b.id === buildingId)
 
-  if (loading) {
+  useEffect(() => {
+    const fetchBuilding = async () => {
+      if (!userData?.activeLocation || !buildingId) return;
+      
+      setBuildingLoading(true);
+      setBuildingError(null);
+      
+      try {
+        const data = await buildingService.fetchBuildingWithUnits(buildingId, userData.activeLocation);
+        setBuilding(data);
+      } catch (err) {
+        setBuildingError(err instanceof Error ? err.message : 'Erro ao carregar empreendimento');
+      } finally {
+        setBuildingLoading(false);
+      }
+    };
+
+    fetchBuilding();
+  }, [buildingId, userData?.activeLocation]);
+
+  if (loading || buildingLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-6xl mx-auto p-6">
@@ -52,12 +75,12 @@ export default function BuildingDetailPage() {
     )
   }
 
-  if (error) {
+  if (error || buildingError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">❌</div>
-          <p className="text-red-600">Erro: {error}</p>
+          <p className="text-red-600">Erro: {error || buildingError}</p>
         </div>
       </div>
     )
@@ -96,7 +119,7 @@ export default function BuildingDetailPage() {
                 Empreendimento não encontrado
               </h2>
               <p className="text-gray-600">
-                O empreendimento com ID &quot;{buildingId}&quot; não foi encontrado.
+                O empreendimento solicitado não foi encontrado.
               </p>
             </div>
           </div>
@@ -125,14 +148,14 @@ export default function BuildingDetailPage() {
                   {building.name}
                 </h1>
                 <p className="text-gray-600">
-                  ID: {building.id} • {building.city}, {building.state}
+                  {building.city}, {building.state}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Building Details */}
-          <BuildingDetails building={building} />
+          <BuildingDetails building={building} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
         </div>
       </div>
     </div>

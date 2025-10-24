@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { API_ENDPOINTS } from '@/lib/config/performance'
+import { getSupabase } from '@/lib/supabaseClient'
 import type { ProposalData } from '@/lib/types/proposal'
 import type { ContactData as ContactFormContactData } from '@/lib/types/proposal'
 
@@ -13,8 +14,10 @@ interface ProposalDataStepProps {
   data: ProposalData
   onDataChange: (data: ProposalData) => void
   errors?: Record<string, string>
-  onPrimaryContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string }) => void
-  onAdditionalContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string }) => void
+  onPrimaryContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string; homioId?: string }) => void
+  onAdditionalContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string; homioId?: string }) => void
+  onPropertyPrefill?: (data: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string }) => void
+  onLoadingChange?: (isLoading: boolean) => void
 }
 
 function normalizeMaritalStatus(value: unknown): string {
@@ -57,7 +60,36 @@ function addOneDayISO(dateStr: string): string {
 }
 
 function extractCustomFieldString(field: Record<string, unknown>): string | null {
-  const v = field.value ?? field.fieldValueString ?? field.fieldValueLabel ?? field.fieldValueFormatted ?? field.fieldValueDate
+  // Primeiro verifica se é um campo array (como empreendimento)
+  if (field.fieldValueArray && Array.isArray(field.fieldValueArray)) {
+    const firstValue = field.fieldValueArray[0]
+    if (firstValue !== undefined && firstValue !== null) {
+      return String(firstValue)
+    }
+  }
+  
+  // Tratar especificamente campos de data com timestamp
+  if (field.fieldValueDate !== undefined && field.fieldValueDate !== null) {
+    const dateValue = field.fieldValueDate
+    if (typeof dateValue === 'number') {
+      // É um timestamp, converter para ISO string
+      const date = new Date(dateValue)
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0]
+      }
+    } else if (dateValue instanceof Date) {
+      return dateValue.toISOString().split('T')[0]
+    } else if (typeof dateValue === 'string') {
+      // Já é uma string, verificar se é uma data válida
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateValue) || /^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) {
+        return toISODateString(dateValue)
+      }
+      return dateValue
+    }
+  }
+  
+  // Depois verifica os outros tipos
+  const v = field.value ?? field.fieldValueString ?? field.fieldValueLabel ?? field.fieldValueFormatted
   if (v === undefined || v === null) return null
   if (v instanceof Date) return v.toISOString().split('T')[0]
   const str = String(v)
@@ -73,7 +105,9 @@ export default function ProposalDataStep({
   onDataChange,
   errors = {},
   onPrimaryContactPrefill,
-  onAdditionalContactPrefill
+  onAdditionalContactPrefill,
+  onPropertyPrefill,
+  onLoadingChange
 }: ProposalDataStepProps) {
   const [formData, setFormData] = useState<ProposalData>(data)
   
@@ -129,6 +163,7 @@ export default function ProposalDataStep({
 
                 setIsSearchingOpportunity(true)
                 setOpportunityError('')
+                onLoadingChange?.(true)
 
                 try {
                   const oppRes = await fetch(API_ENDPOINTS.OPERATIONS.GET_OPPORTUNITY, {
@@ -148,45 +183,157 @@ export default function ProposalDataStep({
 
                   const opp = await oppRes.json()
                   
+                  console.log('[AutoSelect] Response da API get opportunity:', { name: opp.name, customFields: opp.customFields })
+                  
                   if (!opp || !opp.name) {
                     setOpportunityError('Oportunidade não encontrada')
                     return
                   }
 
                   const fieldMappings = getAllMappings()
+                  console.log('[AutoSelect] Mapeamentos carregados - opportunity fields:', fieldMappings.opportunityFields)
                   const updatedData = { ...formData }
                   
                   if (opp.name) {
                     updatedData.proposalName = opp.name
                   }
                   
-                  if (opp.customFields && Array.isArray(opp.customFields)) {
-                    const opportunityCustomFields: Record<string, string> = {}
-                    ;(opp.customFields as Array<{ id?: string; fieldValueString?: string; fieldValueDate?: string }>).
-                      forEach((field) => {
-                        if (field.id && field.fieldValueString !== undefined) {
-                          opportunityCustomFields[field.id] = String(field.fieldValueString)
-                        } else if (field.id && field.fieldValueDate !== undefined) {
-                          opportunityCustomFields[field.id] = new Date(field.fieldValueDate).toISOString().split('T')[0]
-                        }
-                      })
+                    if (opp.customFields && Array.isArray(opp.customFields)) {
+                      const opportunityCustomFields: Record<string, string> = {}
+                      ;(opp.customFields as Array<{ id?: string; fieldValueString?: string; fieldValueDate?: string; fieldValueArray?: string[]; type?: string }>).
+                        forEach((field) => {
+                          if (field.id) {
+                            const extractedValue = extractCustomFieldString(field)
+                            if (extractedValue !== null) {
+                              opportunityCustomFields[field.id] = extractedValue
+                              console.log('[AutoSelect] Campo custom extraído:', {
+                                fieldId: field.id,
+                                fieldType: field.type,
+                                extractedValue: extractedValue
+                              })
+                            }
+                          }
+                        })
+                    
+                    const propertyData: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string } = {}
                     
                     fieldMappings.opportunityFields.forEach(mapping => {
                       const customFieldValue = opportunityCustomFields[mapping.customFieldId]
+                      console.log('[AutoSelect] Processando mapeamento:', {
+                        formField: mapping.formField,
+                        customFieldId: mapping.customFieldId,
+                        hasValue: customFieldValue !== undefined && customFieldValue !== null,
+                        value: customFieldValue
+                      })
+                      
                       if (customFieldValue !== undefined && customFieldValue !== null) {
                         switch (mapping.formField) {
                           case 'responsavel':
                             updatedData.responsible = customFieldValue
                             break
                           case 'empreendimento':
+                            propertyData.development = customFieldValue
+                            break
                           case 'unidade':
+                            propertyData.unit = customFieldValue
+                            break
                           case 'andar':
+                            propertyData.floor = customFieldValue
+                            break
                           case 'torre':
+                            propertyData.tower = customFieldValue
+                            break
                           case 'observacoes':
+                            propertyData.observations = customFieldValue
+                            break
+                          case 'reserve_until':
+                          case 'reservar_at':
+                            const extractedDateValue = typeof customFieldValue === 'string' 
+                              ? customFieldValue 
+                              : extractCustomFieldString(customFieldValue) || ''
+                            
+                            // Adicionar um dia para corrigir o offset
+                            const correctedDateValue = extractedDateValue ? addOneDayISO(extractedDateValue) : ''
+                            
+                            console.log('[AutoSelect] RESERVADO ATÉ - Processando:', {
+                              formField: mapping.formField,
+                              customFieldId: mapping.customFieldId,
+                              customFieldValue,
+                              customFieldValueType: typeof customFieldValue,
+                              extractedDateValue,
+                              correctedDateValue,
+                              finalValue: correctedDateValue
+                            })
+                            
+                            propertyData.reservedUntil = correctedDateValue
+                            
+                            console.log('[AutoSelect] RESERVADO ATÉ - Campo definido:', {
+                              propertyDataReservedUntil: propertyData.reservedUntil
+                            })
                             break
                         }
                       }
                     })
+
+                    // Buscar e selecionar automaticamente building e unit por nome
+                    if (propertyData.development) {
+                      try {
+                        console.log('[AutoSelect] Empreendimento encontrado:', propertyData.development)
+                        const supabase = await getSupabase()
+                        
+                        // Buscar building por nome
+                        const { data: buildingData } = await supabase
+                          .from('buildings')
+                          .select('id, name')
+                          .eq('agency_id', locationId)
+                          .ilike('name', propertyData.development)
+                          .limit(1)
+                        
+                        // Log removido para simplificar
+                        
+                        if (buildingData && buildingData.length > 0) {
+                          propertyData.buildingId = buildingData[0].id
+                          // Log removido para simplificar
+                        } else {
+                          // Log removido para simplificar
+                        }
+                        
+                        // Buscar unit por nome (se building foi encontrado)
+                        if (propertyData.buildingId && propertyData.unit) {
+                          // Log removido para simplificar
+                          
+                          const { data: unitData } = await supabase
+                            .from('units')
+                            .select('id, name, number, status')
+                            .eq('agency_id', locationId)
+                            .eq('building_id', propertyData.buildingId)
+                            .or(`name.ilike.%${propertyData.unit}%,number.ilike.%${propertyData.unit}%`)
+                            .limit(1)
+                          
+                          // Log removido para simplificar
+                          
+                          if (unitData && unitData.length > 0) {
+                            propertyData.unitId = unitData[0].id
+                            // Log removido para simplificar
+                          } else {
+                            // Log removido para simplificar
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Erro ao buscar building/unit por nome:', error)
+                      }
+                    } else {
+                      // Log removido para simplificar
+                    }
+                    
+                    // Sempre chamar onPropertyPrefill
+                    if (onPropertyPrefill) {
+                      console.log('[AutoSelect] RESERVADO ATÉ - Chamando onPropertyPrefill:', {
+                        reservedUntil: propertyData.reservedUntil,
+                        allPropertyData: propertyData
+                      })
+                      onPropertyPrefill(propertyData)
+                    }
                   }
                   
                   setFormData(updatedData)
@@ -219,6 +366,9 @@ export default function ProposalDataStep({
                       if (c.state) contactData.state = c.state
                       if (c.dateOfBirth) contactData.birthDate = addOneDayISO(toISODateString(c.dateOfBirth))
                       
+                      // Adicionar o ID real do contato da Homio
+                      contactData.homioId = opp.contactId
+                      
                       if (c.customFields && Array.isArray(c.customFields)) {
                         const contactCustomFields: Record<string, string> = {}
                         ;(c.customFields as Array<Record<string, unknown>>).forEach((field) => {
@@ -247,9 +397,7 @@ export default function ProposalDataStep({
                                 break
                               case 'estadoCivil':
                               case 'estado_civil':
-                                console.log('[EstadoCivil] mappingId:', mapping.customFieldId, 'raw:', customFieldValue)
                                 const normalized = normalizeMaritalStatus(customFieldValue)
-                                console.log('[EstadoCivil] normalized:', normalized)
                                 contactData.maritalStatus = normalized
                                 break
                               case 'profissao':
@@ -283,21 +431,17 @@ export default function ProposalDataStep({
 
                   // Buscar contato adicional nas relations (secundário)
                   if (opp?.relations && Array.isArray(opp.relations)) {
-                    console.log('[AdditionalContact] relations:', opp.relations)
                     const secondary = (opp.relations as Array<{ recordId?: string }>).
                       find((rel) => typeof rel?.recordId === 'string' && rel.recordId !== opp.contactId)
-                    console.log('[AdditionalContact] chosen secondary recordId:', secondary?.recordId, 'primary contactId:', opp.contactId)
                     if (secondary?.recordId) {
                       const contactRes2 = await fetch(API_ENDPOINTS.OPERATIONS.GET_CONTACT, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contactId: secondary.recordId, locationId })
                       })
-                      console.log('[AdditionalContact] fetch status:', contactRes2.status)
                       if (contactRes2.ok) {
                         const payload2 = await contactRes2.json()
                         const c2 = payload2?.contact ?? payload2
-                        console.log('[AdditionalContact] raw contact payload:', c2)
                         const toTitleCase = (s: string) => s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                         const rawName2 = c2?.fullNameLowerCase || [c2?.firstName, c2?.lastName].filter(Boolean).join(' ')
                         const name2 = rawName2 ? toTitleCase(rawName2) : ''
@@ -316,6 +460,9 @@ export default function ProposalDataStep({
                         if (c2.state) additionalData.state = c2.state
                         if (c2.dateOfBirth) additionalData.birthDate = addOneDayISO(toISODateString(c2.dateOfBirth))
                         
+                        // Adicionar o ID real do contato adicional da Homio
+                        additionalData.homioId = secondary.recordId
+                        
                         if (c2.customFields && Array.isArray(c2.customFields)) {
                           const contactCustomFields2: Record<string, string> = {}
                           ;(c2.customFields as Array<Record<string, unknown>>).forEach((field) => {
@@ -324,7 +471,6 @@ export default function ProposalDataStep({
                             const str = extractCustomFieldString(field)
                             if (str !== null) contactCustomFields2[id] = str
                           })
-                          console.log('[AdditionalContact] extracted custom field ids:', Object.keys(contactCustomFields2))
                           
                           contactFieldMappings2.contactFields.forEach(mapping => {
                             const customFieldValue = contactCustomFields2[mapping.customFieldId]
@@ -346,7 +492,6 @@ export default function ProposalDataStep({
                                 case 'estadoCivil':
                                 case 'estado_civil':
                                   const normalized2 = normalizeMaritalStatus(customFieldValue)
-                                  console.log('[AdditionalContact EstadoCivil] id:', mapping.customFieldId, 'raw:', customFieldValue, 'normalized:', normalized2)
                                   additionalData.maritalStatus = normalized2
                                   break
                                 case 'profissao':
@@ -372,23 +517,17 @@ export default function ProposalDataStep({
                           })
                         }
                         
-                        console.log('[AdditionalContact] final payload to prefill:', additionalData)
                         if (onAdditionalContactPrefill) {
                           onAdditionalContactPrefill(additionalData)
                         }
-                      } else {
-                        console.log('[AdditionalContact] fetch failed')
                       }
-                    } else {
-                      console.log('[AdditionalContact] no secondary relation found')
                     }
-                  } else {
-                    console.log('[AdditionalContact] no relations array on opportunity')
                   }
-                } catch (error) {
+                } catch {
                   setOpportunityError('Erro ao buscar oportunidade')
                 } finally {
                   setIsSearchingOpportunity(false)
+                  onLoadingChange?.(false)
                 }
               }}
             >

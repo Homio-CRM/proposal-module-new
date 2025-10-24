@@ -1,7 +1,8 @@
-import { supabase } from '@/lib/supabaseClient'
+import { getSupabase } from '@/lib/supabaseClient'
 import { userCache, CACHE_KEYS } from '@/lib/cache/userCache'
 import { PERFORMANCE_CONFIG } from '@/lib/config/performance'
 import type { UserData } from '@/lib/types/core'
+import type { User } from '@supabase/supabase-js'
 
 const REFRESH_TOKEN_KEY = 'sb-refresh-token'
 
@@ -16,11 +17,11 @@ export class AuthService {
         return AuthService.instance
     }
 
-    async initializeSession(userData: UserData): Promise<{ access_token: string; refresh_token: string; user: unknown }> {
+    async initializeSession(userData: UserData): Promise<{ access_token: string; refresh_token: string; user: User | null }> {
         const cacheKey = `${CACHE_KEYS.USER_SESSION}_${userData.userId}`
         this.sessionCacheKey = cacheKey
 
-        const cachedSession = userCache.get<{ access_token: string; refresh_token: string; user: unknown }>(cacheKey)
+        const cachedSession = userCache.get<{ access_token: string; refresh_token: string; user: User | null }>(cacheKey)
         if (cachedSession && cachedSession.access_token) {
             return cachedSession
         }
@@ -39,7 +40,8 @@ export class AuthService {
 
             const sessionData = await loginResponse.json()
 
-            const { error: sessionError } = await supabase.auth.setSession({
+            const supabaseClient = await getSupabase()
+            const { error: sessionError } = await supabaseClient.auth.setSession({
                 access_token: sessionData.access_token,
                 refresh_token: sessionData.refresh_token
             })
@@ -61,7 +63,7 @@ export class AuthService {
         }
     }
 
-    async getUserProfile(userId: string): Promise<{ id: string; [key: string]: unknown }> {
+    async getUserProfile(userId: string): Promise<{ id: string; [key: string]: unknown } | null> {
         const cacheKey = `${CACHE_KEYS.USER_PROFILE}_${userId}`
         const cachedProfile = userCache.get<{ id: string; [key: string]: unknown }>(cacheKey)
 
@@ -69,7 +71,8 @@ export class AuthService {
             return cachedProfile
         }
 
-        const { data: profile, error } = await supabase
+        const supabaseClient = await getSupabase()
+        const { data: profile, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -77,6 +80,10 @@ export class AuthService {
 
         if (error) {
             throw error
+        }
+
+        if (!profile) {
+            return null
         }
 
         userCache.set(cacheKey, profile, PERFORMANCE_CONFIG.CACHE_TTL.USER_PROFILE)
@@ -87,7 +94,8 @@ export class AuthService {
         const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null
 
         if (!storedRefreshToken) {
-            const { data: { session }, error } = await supabase.auth.getSession()
+            const supabaseClient = await getSupabase()
+            const { data: { session }, error } = await supabaseClient.auth.getSession()
             if (error || !session?.refresh_token) {
                 throw new Error('No active session or refresh token found to refresh')
             }
@@ -96,8 +104,13 @@ export class AuthService {
             }
         }
 
-        const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession({
-            refresh_token: storedRefreshToken!
+        if (!storedRefreshToken) {
+            throw new Error('No refresh token available')
+        }
+
+        const supabaseClient = await getSupabase()
+        const { data: { session: newSession }, error: refreshError } = await supabaseClient.auth.refreshSession({
+            refresh_token: storedRefreshToken
         })
 
         if (refreshError) {
@@ -121,7 +134,8 @@ export class AuthService {
     }
 
     async logout(): Promise<void> {
-        await supabase.auth.signOut()
+        const supabaseClient = await getSupabase()
+        await supabaseClient.auth.signOut()
         userCache.clear()
         this.sessionCacheKey = null
         if (typeof window !== 'undefined') {
@@ -135,7 +149,8 @@ export class AuthService {
                 return true
             }
 
-            const { data: { session }, error } = await supabase.auth.getSession()
+            const supabaseClient = await getSupabase()
+            const { data: { session }, error } = await supabaseClient.auth.getSession()
             if (session && !error) {
                 if (this.sessionCacheKey) {
                     userCache.set(this.sessionCacheKey, {

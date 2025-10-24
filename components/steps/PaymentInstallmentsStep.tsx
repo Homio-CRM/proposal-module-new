@@ -23,8 +23,14 @@ interface PaymentInstallmentsStepProps {
 
 const PAYMENT_CONDITIONS: { value: PaymentCondition; label: string }[] = [
   { value: 'sinal', label: 'Sinal' },
-  { value: 'mensal', label: 'Mensal' },
-  { value: 'semestral', label: 'Semestral' }
+  { value: 'parcela_unica', label: 'Parcela única' },
+  { value: 'financiamento', label: 'Financiamento' },
+  { value: 'mensais', label: 'Mensais' },
+  { value: 'intermediarias', label: 'Intermediárias' },
+  { value: 'anuais', label: 'Anuais' },
+  { value: 'semestrais', label: 'Semestrais' },
+  { value: 'bimestrais', label: 'Bimestrais' },
+  { value: 'trimestrais', label: 'Trimestrais' }
 ]
 
 const generateId = () => Math.random().toString(36).substr(2, 9)

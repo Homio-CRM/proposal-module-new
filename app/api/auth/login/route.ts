@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
             const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
                 email: userData.email,
                 password: devPassword,
-            })
+            }) as { data: { session: { access_token: string; refresh_token: string } | null } | null; error: Error | null }
 
             if (signInError || !sessionData?.session) {
                 throw new Error('Failed to sign in user (dev)')
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
             email: userData.email,
             password: userPassword,
-        })
+        }) as { data: { session: { access_token: string; refresh_token: string } | null } | null; error: Error | null }
 
         if (signInError || !sessionData?.session) {
             throw new Error('Failed to sign in user')

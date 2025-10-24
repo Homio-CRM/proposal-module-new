@@ -37,6 +37,15 @@
   background-color: #6d28d9 !important;
 }
 
+/* Force accent colors to work */
+.bg-accent-600 {
+  background-color: #dc2626 !important;
+}
+
+.hover\:bg-accent-700:hover {
+  background-color: #b91c1c !important;
+}
+
 .text-primary-600 {
   color: #7c3aed !important;
 }

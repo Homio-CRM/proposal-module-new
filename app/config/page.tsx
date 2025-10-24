@@ -19,6 +19,7 @@ interface ConfigData {
     torre: string
     responsavel: string
     observacoes: string
+    reserve_until: string
   }
   contactFields: {
     cpf: string
@@ -51,7 +52,8 @@ export default function ConfigPage() {
       andar: '',
       torre: '',
       responsavel: '',
-      observacoes: ''
+      observacoes: '',
+      reserve_until: ''
     },
     contactFields: {
       cpf: '',
@@ -107,7 +109,8 @@ export default function ConfigPage() {
             andar: config.floor || '',
             torre: config.tower || '',
             responsavel: config.responsible || '',
-            observacoes: config.observations || ''
+            observacoes: config.observations || '',
+            reserve_until: config.reserve_until || ''
           },
           contactFields: {
             cpf: config.cpf || '',
@@ -212,7 +215,7 @@ export default function ConfigPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
+                {Array.from({ length: 7 }).map((_, i) => (
                   <div key={i} className="space-y-2">
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-10 w-full" />
@@ -382,6 +385,22 @@ export default function ConfigPage() {
                 {getCustomFieldId('opportunityFields', 'observacoes', configData) && (
                   <p className="text-xs text-gray-500 mt-1">
                     ID: {getCustomFieldId('opportunityFields', 'observacoes', configData)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="reserve_until" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Reservado Até
+                </label>
+                <Input
+                  id="reserve_until"
+                  value={configData.opportunityFields.reserve_until}
+                  onChange={(e) => handleInputChange('opportunityFields', 'reserve_until', e.target.value)}
+                  placeholder="Campo para reservado até"
+                />
+                {getCustomFieldId('opportunityFields', 'reserve_until', configData) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ID: {getCustomFieldId('opportunityFields', 'reserve_until', configData)}
                   </p>
                 )}
               </div>

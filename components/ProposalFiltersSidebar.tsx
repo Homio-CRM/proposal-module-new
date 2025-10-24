@@ -11,10 +11,14 @@ import { ProposalFilters, ProposalStatus } from '@/lib/types/proposal'
 import { Filter, ChevronRight } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
 
+interface SelectOption { value: string; label: string }
+
 interface ProposalFiltersSidebarProps {
   filters: ProposalFilters
   onFiltersChange: (filters: ProposalFilters) => void
   onClearFilters: () => void
+  developmentOptions?: SelectOption[]
+  unitOptions?: SelectOption[]
 }
 
 const statusOptions = [
@@ -24,28 +28,20 @@ const statusOptions = [
   { value: 'negada', label: 'Negada' }
 ]
 
-const developmentOptions = [
-  { value: '', label: 'Selecione o empreendimento...' },
-  { value: 'residencial_serra', label: 'Residencial Serra' },
-  { value: 'jardins_da_serra', label: 'Jardins da Serra' },
-  { value: 'torre_azul', label: 'Torre Azul' },
-  { value: 'condominio_verde', label: 'Condomínio Verde' }
+const defaultDevelopmentOptions: SelectOption[] = [
+  { value: '', label: 'Selecione o empreendimento...' }
 ]
 
-const unitOptions = [
-  { value: '', label: 'Selecione a unidade...' },
-  { value: '101', label: '101' },
-  { value: '102', label: '102' },
-  { value: '201', label: '201' },
-  { value: '202', label: '202' },
-  { value: '301', label: '301' },
-  { value: '302', label: '302' }
+const defaultUnitOptions: SelectOption[] = [
+  { value: '', label: 'Selecione a unidade...' }
 ]
 
 export function ProposalFiltersSidebar({
   filters,
   onFiltersChange,
-  onClearFilters
+  onClearFilters,
+  developmentOptions = defaultDevelopmentOptions,
+  unitOptions = defaultUnitOptions
 }: ProposalFiltersSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [width, setWidth] = useState(320)

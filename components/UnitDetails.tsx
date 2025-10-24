@@ -1,18 +1,21 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Unit, Building } from '@/lib/types/building'
+import { Select } from '@/components/ui/select'
+import { Unit, Building, UnitStatus } from '@/lib/types/building'
 import { 
   Home, 
   Building2, 
   MapPin,
-  FileText,
-  Calendar,
-  User
+  Edit,
+  Trash2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import UnitEditDialog from './UnitEditDialog'
+import DeleteConfirmationDialog from './DeleteConfirmationDialog'
+import { buildingService } from '@/lib/services/buildingService'
 
 interface UnitWithBuilding extends Unit {
   building: Building
@@ -26,41 +29,51 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
   const router = useRouter()
   const unit = unitWithBuilding
   const building = unitWithBuilding.building
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [currentUnit, setCurrentUnit] = useState(unit)
+  const [statusUpdating, setStatusUpdating] = useState(false)
 
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('pt-BR')
-  }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'livre':
-        return 'success'
-      case 'reservado':
-        return 'warning'
-      case 'vendido':
-        return 'secondary'
-      default:
-        return 'outline'
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'livre':
-        return 'Livre'
-      case 'reservado':
-        return 'Reservado'
-      case 'vendido':
-        return 'Vendido'
-      default:
-        return 'Outro'
-    }
-  }
 
   const handleBuildingClick = () => {
     router.push(`/buildings/${building.id}`)
+  }
+
+  const handleUnitUpdated = (updatedUnit: Unit) => {
+    setCurrentUnit({
+      ...updatedUnit,
+      building: currentUnit.building
+    })
+  }
+
+  const handleDeleteUnit = async () => {
+    await buildingService.deleteUnit(currentUnit.id)
+    router.push(`/buildings/${building.id}`)
+  }
+
+  const handleStatusChange = async (newStatus: UnitStatus) => {
+    if (newStatus === currentUnit.status || statusUpdating) return
+
+    setStatusUpdating(true)
+    const previousStatus = currentUnit.status
+
+    setCurrentUnit(prev => ({
+      ...prev,
+      status: newStatus
+    }))
+
+    try {
+      await buildingService.updateUnitStatus(currentUnit.id, newStatus)
+    } catch {
+      setCurrentUnit(prev => ({
+        ...prev,
+        status: previousStatus
+      }))
+    } finally {
+      setStatusUpdating(false)
+    }
   }
 
   return (
@@ -68,37 +81,67 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
       {/* Informações da Unidade */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Home className="h-5 w-5 text-primary-600" />
-            Informações da Unidade
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5 text-primary-600" />
+              Informações da Unidade
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Número</label>
-              <p className="text-sm text-gray-900">{unit.number}</p>
+              <label className="text-sm font-medium text-gray-700">Nome</label>
+              <p className="text-sm text-gray-900">{currentUnit.name}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">ID</label>
-              <p className="text-sm text-gray-900">{unit.id}</p>
+              <label className="text-sm font-medium text-gray-700">Número</label>
+              <p className="text-sm text-gray-900">{currentUnit.number}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Status</label>
               <div className="mt-1">
-                <Badge variant={getStatusBadgeVariant(unit.status)}>
-                  {getStatusLabel(unit.status)}
-                </Badge>
+                <Select
+                  value={currentUnit.status}
+                  onChange={(e) => handleStatusChange(e.target.value as UnitStatus)}
+                  disabled={statusUpdating}
+                  className="w-32"
+                >
+                  <option value="livre">Livre</option>
+                  <option value="reservado">Reservado</option>
+                  <option value="vendido">Vendido</option>
+                </Select>
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Andar</label>
-              <p className="text-sm text-gray-900">{unit.floor}° andar</p>
-            </div>
-            {unit.tower && (
+            {currentUnit.floor && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">Andar</label>
+                <p className="text-sm text-gray-900">{currentUnit.floor}° andar</p>
+              </div>
+            )}
+            {currentUnit.tower && (
               <div>
                 <label className="text-sm font-medium text-gray-700">Torre</label>
-                <p className="text-sm text-gray-900">{unit.tower}</p>
+                <p className="text-sm text-gray-900">{currentUnit.tower}</p>
               </div>
             )}
           </div>
@@ -132,74 +175,28 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
                   <MapPin className="h-4 w-4" />
                   <span>{building.address}, {building.city} - {building.state}</span>
                 </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  ID: {building.id}
-                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Histórico de Propostas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary-600" />
-            Histórico de Propostas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {unit.proposalsCount > 0 ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-primary-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {unit.proposalsCount} proposta(s) feita(s)
-                    </div>
-                    {unit.lastProposalDate && (
-                      <div className="text-sm text-gray-600">
-                        Última proposta em {formatDate(unit.lastProposalDate)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push('/proposals')}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Ver Propostas
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nenhuma proposta ainda
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Esta unidade ainda não possui propostas cadastradas.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => router.push('/proposals/create')}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Criar Proposta
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <UnitEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        unit={currentUnit}
+        onUpdated={handleUnitUpdated}
+      />
 
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteUnit}
+        title="Deletar Unidade"
+        description={`Tem certeza que deseja deletar a unidade "${currentUnit.name || currentUnit.number}"?`}
+        itemName={currentUnit.name || `Unidade ${currentUnit.number}`}
+        itemType="unidade"
+      />
     </div>
   )
 }

@@ -118,6 +118,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
     proposal: {
       opportunityId: 'OPP-001',
       proposalDate: '2024-01-15',
+      responsible: 'João Silva',
       proposalType: 'Venda',
       proposalStatus: 'Em Análise',
       priority: 'Alta',
@@ -130,6 +131,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       name: 'João Silva',
       cpf: '123.456.789-00',
       rg: '12.345.678-9',
+      rgIssuer: 'SSP/SP',
       nationality: 'Brasileira',
       maritalStatus: 'Solteiro',
       birthDate: '1985-03-15',
@@ -145,6 +147,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       name: 'Maria Silva',
       cpf: '987.654.321-00',
       rg: '98.765.432-1',
+      rgIssuer: 'SSP/SP',
       nationality: 'Brasileira',
       maritalStatus: 'Casada',
       birthDate: '1987-07-20',
@@ -161,7 +164,6 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       unit: '101',
       floor: '1',
       tower: 'A',
-      responsible: 'João Silva',
       reservedUntil: '2024-02-15',
       observations: 'Apartamento com vista para o jardim, próximo ao elevador social.'
     },
@@ -175,7 +177,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       },
       {
         id: '2',
-        condition: 'mensal',
+        condition: 'mensais',
         value: 15000,
         quantity: 24,
         date: '2024-02-15'
@@ -186,6 +188,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
     proposal: {
       opportunityId: 'OPP-002',
       proposalDate: '2024-01-10',
+      responsible: 'Ana Costa',
       proposalType: 'Venda',
       proposalStatus: 'Aprovada',
       priority: 'Média',
@@ -198,6 +201,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       name: 'Ana Costa',
       cpf: '111.222.333-44',
       rg: '11.222.333-4',
+      rgIssuer: 'SSP/SP',
       nationality: 'Brasileira',
       maritalStatus: 'Casada',
       birthDate: '1990-05-10',
@@ -214,7 +218,6 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       unit: '203',
       floor: '2',
       tower: 'B',
-      responsible: 'Ana Costa',
       reservedUntil: '2024-02-10',
       observations: 'Apartamento com 2 quartos, sacada ampla.'
     },
@@ -228,7 +231,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       },
       {
         id: '2',
-        condition: 'mensal',
+        condition: 'mensais',
         value: 12000,
         quantity: 30,
         date: '2024-02-10'
@@ -239,6 +242,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
     proposal: {
       opportunityId: 'OPP-003',
       proposalDate: '2024-01-08',
+      responsible: 'Pedro Mendes',
       proposalType: 'Venda',
       proposalStatus: 'Negada',
       priority: 'Baixa',
@@ -251,6 +255,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       name: 'Pedro Mendes',
       cpf: '555.666.777-88',
       rg: '55.666.777-8',
+      rgIssuer: 'SSP/SP',
       nationality: 'Brasileira',
       maritalStatus: 'Divorciado',
       birthDate: '1978-12-03',
@@ -267,7 +272,6 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       unit: '501',
       floor: '5',
       tower: 'C',
-      responsible: 'Pedro Mendes',
       reservedUntil: '2024-02-08',
       observations: 'Apartamento de cobertura com terraço privativo.'
     },
@@ -281,7 +285,7 @@ export const mockProposalDetails: Record<string, ProposalFormData> = {
       },
       {
         id: '2',
-        condition: 'semestral',
+        condition: 'semestrais',
         value: 78000,
         quantity: 6,
         date: '2024-07-12'

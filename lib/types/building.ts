@@ -1,4 +1,5 @@
-export type UnitStatus = 'livre' | 'reservado' | 'vendido' | 'outro'
+export type UnitStatus = 'livre' | 'reservado' | 'vendido'
+export type UnitStatusDB = 'available' | 'reserved' | 'sold'
 
 export interface Building {
   id: string
@@ -6,38 +7,36 @@ export interface Building {
   address: string
   city: string
   state: string
-  zipCode: string
+  agency_id: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Unit {
+  id: string
+  building_id: string
+  number: string
+  floor: string
+  tower: string
+  name: string
+  status: UnitStatus
+  agency_id: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BuildingWithUnits extends Building {
+  units: Unit[]
   totalUnits: number
   availableUnits: number
   reservedUnits: number
   soldUnits: number
 }
 
-export interface Unit {
-  id: string
-  buildingId: string
-  number: string
-  floor: string
-  tower?: string
-  status: UnitStatus
-  area?: number
-  bedrooms?: number
-  bathrooms?: number
-  price?: number
-  proposalsCount: number
-  lastProposalDate?: string
-}
-
-export interface BuildingWithUnits extends Building {
-  units: Unit[]
-}
-
 export interface BuildingFilters {
   search: string
   city: string
   status: UnitStatus | 'all'
-  minPrice?: number
-  maxPrice?: number
 }
 
 export interface BuildingListItem {
@@ -50,5 +49,4 @@ export interface BuildingListItem {
   availableUnits: number
   reservedUnits: number
   soldUnits: number
-  lastActivity?: string
 }

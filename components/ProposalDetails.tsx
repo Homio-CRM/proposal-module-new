@@ -2,61 +2,122 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ContactCard } from '@/components/ContactCard'
 import { ProposalFormData, PaymentCondition } from '@/lib/types/proposal'
+import { getStatusBadgeVariant, getStatusLabel } from '@/lib/utils/proposalStatus'
 import { 
   FileText, 
-  User, 
-  UserPlus, 
   Building, 
   CreditCard,
-  Calendar,
-  DollarSign,
-  MapPin,
-  Phone,
-  Mail
+  Calendar
 } from 'lucide-react'
 
 interface ProposalDetailsProps {
   data: ProposalFormData
+  locationId: string
 }
 
-export function ProposalDetails({ data }: ProposalDetailsProps) {
+export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR')
+    if (!dateString || dateString.trim() === '') {
+      return '—'
+    }
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return '—'
+      }
+      return date.toLocaleDateString('pt-BR')
+    } catch {
+      return '—'
+    }
   }
 
   const formatPrice = (price: number) => {
+    if (!price || isNaN(price)) {
+      return '—'
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(price)
   }
 
+  const formatField = (value: string | number | undefined | null) => {
+    if (value === undefined || value === null || value === '') {
+      return '—'
+    }
+    if (typeof value === 'string' && value.trim() === '') {
+      return '—'
+    }
+    return String(value)
+  }
+
   const getPaymentConditionLabel = (condition: PaymentCondition) => {
     switch (condition) {
       case 'sinal':
         return 'Sinal'
-      case 'mensal':
-        return 'Mensal'
-      case 'semestral':
-        return 'Semestral'
-      default:
-        return condition
+      case 'parcela_unica':
+        return 'Parcela única'
+      case 'financiamento':
+        return 'Financiamento'
+      case 'mensais':
+        return 'Mensais'
+      case 'intermediarias':
+        return 'Intermediárias'
+      case 'anuais':
+        return 'Anuais'
+      case 'semestrais':
+        return 'Semestrais'
+      case 'bimestrais':
+        return 'Bimestrais'
+      case 'trimestrais':
+        return 'Trimestrais'
     }
   }
 
-  const getStatusBadgeVariant = (status?: string) => {
-    switch (status) {
-      case 'Em Análise':
-        return 'warning'
-      case 'Aprovada':
+  const getUnitStatusLabel = (status?: string) => {
+    if (!status) return 'N/A'
+    
+    switch (status.toLowerCase()) {
+      case 'available':
+        return 'Disponível'
+      case 'reserved':
+        return 'Reservada'
+      case 'sold':
+        return 'Vendida'
+      case 'maintenance':
+        return 'Em Manutenção'
+      default:
+        return status
+    }
+  }
+
+  const getUnitStatusBadgeVariant = (status?: string) => {
+    if (!status) return 'outline'
+    
+    switch (status.toLowerCase()) {
+      case 'available':
         return 'success'
-      case 'Negada':
+      case 'reserved':
+        return 'warning'
+      case 'sold':
         return 'destructive'
+      case 'maintenance':
+        return 'secondary'
       default:
         return 'outline'
     }
   }
+
+
+  const handleOpportunityClick = () => {
+    if (data.proposal.opportunityId) {
+      const url = `https://app.homio.com.br/v2/location/${locationId}/opportunities/list/${data.proposal.opportunityId}?tab=Detalhes+da+oportunidade`
+      window.open(url, '_blank')
+    }
+  }
+
 
 
   return (
@@ -65,15 +126,26 @@ export function ProposalDetails({ data }: ProposalDetailsProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary-600" />
-            Dados da Proposta
+            <button
+              onClick={handleOpportunityClick}
+              className={`flex items-center gap-2 transition-colors ${
+                data.proposal.opportunityId 
+                  ? 'hover:text-primary-700 cursor-pointer' 
+                  : 'cursor-default opacity-50'
+              }`}
+              disabled={!data.proposal.opportunityId}
+              title={data.proposal.opportunityId ? 'Abrir oportunidade no Homio' : 'ID da oportunidade não disponível'}
+            >
+              <FileText className="h-5 w-5 text-primary-600" />
+              Dados da Proposta
+            </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700">ID da Oportunidade</label>
-              <p className="text-sm text-gray-900">{data.proposal.opportunityId}</p>
+              <p className="text-sm text-gray-900">{formatField(data.proposal.opportunityId)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Data da Proposta</label>
@@ -83,18 +155,18 @@ export function ProposalDetails({ data }: ProposalDetailsProps) {
               <label className="text-sm font-medium text-gray-700">Status</label>
               <div className="mt-1">
                 <Badge variant={getStatusBadgeVariant(data.proposal.proposalStatus)}>
-                  {data.proposal.proposalStatus || 'N/A'}
+                  {getStatusLabel(data.proposal.proposalStatus)}
                 </Badge>
               </div>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Responsável</label>
-              <p className="text-sm text-gray-900">{data.property.responsible}</p>
+              <p className="text-sm text-gray-900">{formatField(data.proposal.responsible)}</p>
             </div>
-            {data.property.observations && (
+            {data.property.observations && data.property.observations.trim() !== '' && (
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-700">Observações</label>
-                <p className="text-sm text-gray-900">{data.property.observations}</p>
+                <p className="text-sm text-gray-900">{formatField(data.property.observations)}</p>
               </div>
             )}
           </div>
@@ -102,137 +174,29 @@ export function ProposalDetails({ data }: ProposalDetailsProps) {
       </Card>
 
       {/* Contato Principal */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary-600" />
-            Contato Principal
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Nome</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">CPF</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.cpf}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">RG</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.rg}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Nacionalidade</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.nationality}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Estado Civil</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.maritalStatus}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Data de Nascimento</label>
-              <p className="text-sm text-gray-900">{formatDate(data.primaryContact.birthDate)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">E-mail</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Telefone</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.phone}</p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-gray-700">Endereço</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.address}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">CEP</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.zipCode}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Cidade</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.city}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Bairro</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.neighborhood}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Estado</label>
-              <p className="text-sm text-gray-900">{data.primaryContact.state}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ContactCard
+        title="Contato Principal"
+        icon="primary"
+        contactId={data.primaryContact.homioId || null}
+        locationId={locationId}
+        fallbackData={{
+          ...data.primaryContact,
+          homioId: data.primaryContact.homioId || ''
+        }}
+      />
 
       {/* Contato Adicional */}
       {data.additionalContact && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary-600" />
-              Contato Adicional
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Nome</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.name}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">CPF</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.cpf}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">RG</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.rg}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Nacionalidade</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.nationality}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Estado Civil</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.maritalStatus}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Data de Nascimento</label>
-                <p className="text-sm text-gray-900">{formatDate(data.additionalContact.birthDate)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">E-mail</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Telefone</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.phone}</p>
-              </div>
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium text-gray-700">Endereço</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.address}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">CEP</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.zipCode}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Cidade</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.city}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Bairro</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.neighborhood}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Estado</label>
-                <p className="text-sm text-gray-900">{data.additionalContact.state}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ContactCard
+          title="Contato Adicional"
+          icon="additional"
+          contactId={data.additionalContact.homioId || null}
+          locationId={locationId}
+          fallbackData={{
+            ...data.additionalContact,
+            homioId: data.additionalContact.homioId || ''
+          }}
+        />
       )}
 
       {/* Dados do Imóvel */}
@@ -247,23 +211,31 @@ export function ProposalDetails({ data }: ProposalDetailsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700">Empreendimento</label>
-              <p className="text-sm text-gray-900">{data.property.development}</p>
+              <p className="text-sm text-gray-900">{formatField(data.property.development)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Unidade</label>
-              <p className="text-sm text-gray-900">{data.property.unit}</p>
+              <p className="text-sm text-gray-900">{formatField(data.property.unit)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Andar</label>
-              <p className="text-sm text-gray-900">{data.property.floor}</p>
+              <p className="text-sm text-gray-900">{formatField(data.property.floor)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Torre</label>
-              <p className="text-sm text-gray-900">{data.property.tower}</p>
+              <p className="text-sm text-gray-900">{formatField(data.property.tower)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Reservado até</label>
-              <p className="text-sm text-gray-900">{formatDate(data.property.reservedUntil)}</p>
+              <p className="text-sm text-gray-900">{formatDate(data.property.reservedUntil || '')}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Status da Unidade</label>
+              <div className="mt-1">
+                <Badge variant={getUnitStatusBadgeVariant(data.property.unitStatus)}>
+                  {getUnitStatusLabel(data.property.unitStatus)}
+                </Badge>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -325,8 +297,26 @@ export function ProposalDetails({ data }: ProposalDetailsProps) {
                             {installment.quantity}
                           </span>
                           <span className="text-sm text-gray-500">
-                            {installment.condition === 'sinal' ? 'vez' : 
-                             installment.condition === 'mensal' ? 'meses' : 'semestres'}
+                            {(() => {
+                              switch (installment.condition) {
+                                case 'sinal':
+                                case 'parcela_unica':
+                                  return 'vez'
+                                case 'mensais':
+                                case 'financiamento':
+                                  return 'meses'
+                                case 'bimestrais':
+                                  return 'bimestres'
+                                case 'trimestrais':
+                                  return 'trimestres'
+                                case 'semestrais':
+                                  return 'semestres'
+                                case 'anuais':
+                                  return 'anos'
+                                case 'intermediarias':
+                                  return 'vezes'
+                              }
+                            })()}
                           </span>
                         </div>
                       </div>

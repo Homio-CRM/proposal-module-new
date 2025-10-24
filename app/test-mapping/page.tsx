@@ -1,17 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { useOpportunityData } from '@/hooks/useOpportunityData'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { OpportunityData, ContactData } from '@/lib/services/opportunityService'
 
 export default function TestMappingPage() {
   const { customFieldIds, getAllMappings } = useCustomFieldsContext()
   const { loadOpportunityData, loading, error } = useOpportunityData()
   const [opportunityId, setOpportunityId] = useState('')
-  const [mappedData, setMappedData] = useState<any>(null)
+  const [mappedData, setMappedData] = useState<{
+    opportunity: OpportunityData;
+    contact: ContactData | null;
+    opportunityFormData: Record<string, string | number | boolean | null>;
+    contactFormData: Record<string, string | number | boolean | null>;
+  } | null>(null)
 
   const handleTestMapping = async () => {
     if (!opportunityId.trim()) {

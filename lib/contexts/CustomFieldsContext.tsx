@@ -16,7 +16,7 @@ interface FieldMapping {
 interface CustomFieldsContextType {
   customFieldIds: CustomFieldIds
   setCustomFieldIds: (ids: CustomFieldIds) => void
-  getCustomFieldId: (section: 'opportunityFields' | 'contactFields', field: string, configData?: any) => string | null
+  getCustomFieldId: (section: 'opportunityFields' | 'contactFields', field: string, configData?: CustomFieldIds) => string | null
   getFieldMapping: (section: 'opportunityFields' | 'contactFields', field: string) => FieldMapping | null
   getAllMappings: () => { opportunityFields: FieldMapping[], contactFields: FieldMapping[] }
 }
@@ -37,7 +37,7 @@ export function CustomFieldsProvider({ children }: CustomFieldsProviderProps) {
     setCustomFieldIdsState(ids)
   }
 
-  const getCustomFieldId = (section: 'opportunityFields' | 'contactFields', field: string, configData?: any): string | null => {
+  const getCustomFieldId = (section: 'opportunityFields' | 'contactFields', field: string, configData?: CustomFieldIds): string | null => {
     const fieldIds = customFieldIds[section]
     
     if (configData) {

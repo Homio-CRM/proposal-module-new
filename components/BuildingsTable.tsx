@@ -1,53 +1,25 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { BuildingListItem } from '@/lib/types/building'
-import { Trash2, Building2, MapPin } from 'lucide-react'
+import { Building2, MapPin } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface BuildingsTableProps {
   buildings: BuildingListItem[]
-  onCopy: (id: string) => void
-  onDelete: (id: string) => void
-  onView: (id: string) => void
   selectedBuildings: string[]
   onSelectBuilding: (id: string, selected: boolean) => void
   onSelectAll: () => void
-  onBulkDelete: () => void
 }
 
 export function BuildingsTable({ 
   buildings, 
-  onCopy, 
-  onDelete, 
-  onView, 
   selectedBuildings, 
   onSelectBuilding, 
-  onSelectAll, 
-  onBulkDelete 
+  onSelectAll
 }: BuildingsTableProps) {
   const router = useRouter()
-  
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('pt-BR')
-  }
-
-  const getStatusBadgeVariant = (availableUnits: number, reservedUnits: number, soldUnits: number) => {
-    if (availableUnits > 0) return 'success'
-    if (reservedUnits > 0) return 'warning'
-    if (soldUnits > 0) return 'secondary'
-    return 'outline'
-  }
-
-  const getStatusLabel = (availableUnits: number, reservedUnits: number, soldUnits: number) => {
-    if (availableUnits > 0) return 'Disponível'
-    if (reservedUnits > 0) return 'Reservado'
-    if (soldUnits > 0) return 'Vendido'
-    return 'Indisponível'
-  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -80,8 +52,6 @@ export function BuildingsTable({
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Vendidas
               </th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -112,9 +82,7 @@ export function BuildingsTable({
                       <div className="text-sm font-medium text-neutral-900 group-hover:text-primary-600 transition-colors duration-150">
                         {building.name}
                       </div>
-                      <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors duration-150">
-                        ID: {building.id}
-                      </div>
+
                     </div>
                   </div>
                 </td>
@@ -156,19 +124,6 @@ export function BuildingsTable({
                       {building.soldUnits}
                     </Badge>
                   </div>
-                </td>
-                <td className="px-2 py-3 whitespace-nowrap text-center w-12">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(building.id)
-                    }}
-                    className="h-7 w-7 p-0 border-transparent hover:bg-red-50 hover:border-red-300"
-                  >
-                    <Trash2 className="h-3 w-3 text-red-600" />
-                  </Button>
                 </td>
               </tr>
             ))}

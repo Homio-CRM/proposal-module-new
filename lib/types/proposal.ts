@@ -29,18 +29,31 @@ export interface ContactData {
   neighborhood: string
   state: string
   profession?: string
+  homioId?: string
 }
 
 export interface PropertyData {
   development: string
   unit: string
-  floor: string
-  tower: string
-  reservedUntil: string
+  floor?: string
+  tower?: string
+  reservedUntil?: string
   observations: string
+  unitId?: string
+  buildingId?: string
+  unitStatus?: string
 }
 
-export type PaymentCondition = 'sinal' | 'mensal' | 'semestral'
+export type PaymentCondition =
+  | 'sinal'
+  | 'parcela_unica'
+  | 'financiamento'
+  | 'mensais'
+  | 'intermediarias'
+  | 'anuais'
+  | 'semestrais'
+  | 'bimestrais'
+  | 'trimestrais'
 
 export interface PaymentInstallment {
   id: string
@@ -69,6 +82,7 @@ export type ProposalStatus = 'em_analise' | 'aprovada' | 'negada'
 
 export interface ProposalListItem {
   id: string
+  opportunityId?: string
   title: string
   primaryContactName: string
   development: string

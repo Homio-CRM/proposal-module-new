@@ -1,18 +1,21 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BuildingsFiltersSidebar } from "@/components/BuildingsFiltersSidebar";
 import { BuildingsTable } from "@/components/BuildingsTable";
-import { BuildingFilters } from "@/lib/types/building";
-import { mockBuildings } from "@/lib/mock/buildings";
+import { BuildingFilters, BuildingListItem } from "@/lib/types/building";
+import { buildingService } from "@/lib/services/buildingService";
 import { Plus, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function BuildingsPage() {
   const { userData, loading, error } = useUserDataContext();
+  const [buildings, setBuildings] = useState<BuildingListItem[]>([]);
+  const [buildingsLoading, setBuildingsLoading] = useState(true);
+  const [buildingsError, setBuildingsError] = useState<string | null>(null);
   const [filters, setFilters] = useState<BuildingFilters>({
     search: '',
     city: '',
@@ -20,9 +23,29 @@ export default function BuildingsPage() {
   });
   const [selectedBuildings, setSelectedBuildings] = useState<string[]>([]);
 
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      if (!userData?.activeLocation) return;
+      
+      setBuildingsLoading(true);
+      setBuildingsError(null);
+      
+      try {
+        const data = await buildingService.fetchBuildingsListData(userData.activeLocation);
+        setBuildings(data);
+      } catch (err) {
+        setBuildingsError(err instanceof Error ? err.message : 'Erro ao carregar empreendimentos');
+      } finally {
+        setBuildingsLoading(false);
+      }
+    };
+
+    fetchBuildings();
+  }, [userData?.activeLocation]);
+
   const filteredBuildings = useMemo(() => {
-    return mockBuildings
-      .filter(building => {
+    return buildings
+      .filter((building: BuildingListItem) => {
         const matchesSearch = !filters.search || 
           building.name.toLowerCase().includes(filters.search.toLowerCase()) ||
           building.address.toLowerCase().includes(filters.search.toLowerCase());
@@ -36,11 +59,8 @@ export default function BuildingsPage() {
           (filters.status === 'vendido' && building.soldUnits > 0);
 
         return matchesSearch && matchesCity && matchesStatus;
-      })
-      .sort((a, b) => {
-        return new Date(b.lastActivity || '').getTime() - new Date(a.lastActivity || '').getTime();
       });
-  }, [filters]);
+  }, [buildings, filters]);
 
   const handleFiltersChange = (newFilters: BuildingFilters) => {
     setFilters(newFilters);
@@ -54,11 +74,6 @@ export default function BuildingsPage() {
     });
   };
 
-  const handleCopy = () => {};
-
-  const handleDelete = () => {};
-
-  const handleView = () => {};
 
   const handleSelectBuilding = (id: string, selected: boolean) => {
     if (selected) {
@@ -78,12 +93,11 @@ export default function BuildingsPage() {
 
   const handleBulkDelete = () => {
     if (selectedBuildings.length > 0) {
-      console.log('Deletando empreendimentos:', selectedBuildings);
       setSelectedBuildings([]);
     }
   };
 
-  if (loading) {
+  if (loading || buildingsLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="flex min-w-0">
@@ -163,12 +177,12 @@ export default function BuildingsPage() {
     );
   }
 
-  if (error) {
+  if (error || buildingsError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">❌</div>
-          <p className="text-red-600">Erro: {error}</p>
+          <p className="text-red-600">Erro: {error || buildingsError}</p>
         </div>
       </div>
     );
@@ -192,6 +206,7 @@ export default function BuildingsPage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           onClearFilters={handleClearFilters}
+          buildings={buildings}
         />
 
         <div className="flex-1 p-6 overflow-visible min-w-0">
@@ -230,13 +245,9 @@ export default function BuildingsPage() {
 
           <BuildingsTable
             buildings={filteredBuildings}
-            onCopy={handleCopy}
-            onDelete={handleDelete}
-            onView={handleView}
             selectedBuildings={selectedBuildings}
             onSelectBuilding={handleSelectBuilding}
             onSelectAll={handleSelectAll}
-            onBulkDelete={handleBulkDelete}
           />
 
           <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">

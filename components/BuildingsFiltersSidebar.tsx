@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { BuildingFilters, UnitStatus } from '@/lib/types/building'
-import { mockBuildings } from '@/lib/mock/buildings'
+import { BuildingFilters, BuildingListItem } from '@/lib/types/building'
 import { Filter, ChevronRight } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
 
@@ -16,6 +15,7 @@ interface BuildingsFiltersSidebarProps {
   filters: BuildingFilters
   onFiltersChange: (filters: BuildingFilters) => void
   onClearFilters: () => void
+  buildings: BuildingListItem[]
 }
 
 const statusOptions = [
@@ -25,18 +25,18 @@ const statusOptions = [
   { value: 'vendido', label: 'Com Unidades Vendidas' }
 ]
 
-const cityOptions = [
-  { value: '', label: 'Selecione a cidade...' },
-  ...Array.from(new Set(mockBuildings.map(building => building.city)))
-    .sort()
-    .map(city => ({ value: city, label: city }))
-]
-
 export function BuildingsFiltersSidebar({
   filters,
   onFiltersChange,
-  onClearFilters
+  onClearFilters,
+  buildings
 }: BuildingsFiltersSidebarProps) {
+  const cityOptions = useMemo(() => [
+    { value: '', label: 'Selecione a cidade...' },
+    ...Array.from(new Set(buildings.map((building: BuildingListItem) => building.city)))
+      .sort()
+      .map((city: string) => ({ value: city, label: city }))
+  ], [buildings])
   const [isExpanded, setIsExpanded] = useState(true)
   const [width, setWidth] = useState(320)
   const [isResizing, setIsResizing] = useState(false)

@@ -202,7 +202,11 @@ export default function AdditionalContactStep({
             value={formData.rgIssuer}
             onChange={(e) => handleInputChange('rgIssuer', e.target.value)}
             placeholder="Ex.: SSP-SP"
+            className={errors['additionalContact.rgIssuer'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.rgIssuer'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.rgIssuer']}</p>
+          )}
         </div>
 
         <div>
@@ -233,6 +237,7 @@ export default function AdditionalContactStep({
             id="maritalStatus"
             value={formData.maritalStatus}
             onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
+            className={errors['additionalContact.maritalStatus'] ? 'border-red-500' : ''}
           >
             <option value="">Selecione o estado civil</option>
             {MARITAL_STATUS_OPTIONS.map(option => (
@@ -241,6 +246,9 @@ export default function AdditionalContactStep({
               </option>
             ))}
           </Select>
+          {errors['additionalContact.maritalStatus'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.maritalStatus']}</p>
+          )}
         </div>
 
         <div>
@@ -253,7 +261,11 @@ export default function AdditionalContactStep({
             value={formData.profession || ''}
             onChange={(e) => handleInputChange('profession', e.target.value)}
             placeholder="Digite a profissão"
+            className={errors['additionalContact.profession'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.profession'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.profession']}</p>
+          )}
         </div>
 
         <div>
@@ -268,7 +280,11 @@ export default function AdditionalContactStep({
             placeholder="(00) 00000-0000"
             format={formatPhone}
             maxLength={11}
+            className={errors['additionalContact.phone'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.phone'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.phone']}</p>
+          )}
         </div>
       </div>
 
@@ -286,7 +302,11 @@ export default function AdditionalContactStep({
             placeholder="00000-000"
             format={formatCEP}
             maxLength={8}
+            className={errors['additionalContact.zipCode'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.zipCode'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.zipCode']}</p>
+          )}
         </div>
 
         <div>
@@ -299,7 +319,11 @@ export default function AdditionalContactStep({
             value={formData.address}
             onChange={(e) => handleInputChange('address', e.target.value)}
             placeholder="Digite o endereço completo"
+            className={errors['additionalContact.address'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.address'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.address']}</p>
+          )}
         </div>
 
         <div>
@@ -312,7 +336,11 @@ export default function AdditionalContactStep({
             value={formData.city}
             onChange={(e) => handleInputChange('city', e.target.value)}
             placeholder="Digite a cidade"
+            className={errors['additionalContact.city'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.city'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.city']}</p>
+          )}
         </div>
       </div>
 
@@ -328,7 +356,11 @@ export default function AdditionalContactStep({
             value={formData.neighborhood}
             onChange={(e) => handleInputChange('neighborhood', e.target.value)}
             placeholder="Digite o bairro"
+            className={errors['additionalContact.neighborhood'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.neighborhood'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.neighborhood']}</p>
+          )}
         </div>
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -340,7 +372,11 @@ export default function AdditionalContactStep({
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             placeholder="Digite o e-mail"
+            className={errors['additionalContact.email'] ? 'border-red-500' : ''}
           />
+          {errors['additionalContact.email'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.email']}</p>
+          )}
         </div>
         <div>
           <label htmlFor="state" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -350,6 +386,7 @@ export default function AdditionalContactStep({
             id="state"
             value={formData.state}
             onChange={(e) => handleInputChange('state', e.target.value)}
+            className={errors['additionalContact.state'] ? 'border-red-500' : ''}
           >
             <option value="">Selecione o estado</option>
             {BRAZILIAN_STATES.map(state => (
@@ -358,6 +395,9 @@ export default function AdditionalContactStep({
               </option>
             ))}
           </Select>
+          {errors['additionalContact.state'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.state']}</p>
+          )}
         </div>
       </div>
     </div>

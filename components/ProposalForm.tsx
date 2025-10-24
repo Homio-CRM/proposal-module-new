@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
+import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
@@ -33,6 +34,7 @@ import AdditionalContactStep from './steps/AdditionalContactStep'
 import PropertyDataStep from './steps/PropertyDataStep'
 import PaymentInstallmentsStep from './steps/PaymentInstallmentsStep'
 import SummaryStep from './steps/SummaryStep'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const FORM_STEPS: ProposalFormStep[] = [
   {
@@ -79,6 +81,7 @@ const STEP_ICONS = {
 
 export default function ProposalForm() {
   const { userData, loading } = useUserDataContext()
+  const { customFieldIds } = useCustomFieldsContext()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -158,6 +161,22 @@ export default function ProposalForm() {
     return cleanCEP.length === 8
   }
 
+  const validateName = (name: string): boolean => {
+    const trimmedName = name.trim()
+    const words = trimmedName.split(/\s+/).filter(word => word.length > 0)
+    return words.length >= 2 && words.every(word => word.length >= 2)
+  }
+
+  const validatePhone = (phone: string): boolean => {
+    const cleanPhone = phone.replace(/\D/g, '')
+    return cleanPhone.length >= 10
+  }
+
+  const validateCPFMinLength = (cpf: string): boolean => {
+    const cleanCPF = cpf.replace(/\D/g, '')
+    return cleanCPF.length === 11
+  }
+
   const validateStep = (stepId: number): Record<string, string> => {
     const errors: Record<string, string> = {}
 
@@ -180,11 +199,15 @@ export default function ProposalForm() {
       case 2: // Primary Contact
         if (!formData.primaryContact.name.trim()) {
           errors['primaryContact.name'] = 'Nome é obrigatório'
+        } else if (!validateName(formData.primaryContact.name)) {
+          errors['primaryContact.name'] = 'Nome deve conter pelo menos duas palavras'
         }
         if (!formData.primaryContact.cpf.trim()) {
           errors['primaryContact.cpf'] = 'CPF é obrigatório'
+        } else if (!validateCPFMinLength(formData.primaryContact.cpf)) {
+          errors['primaryContact.cpf'] = 'CPF deve ter 11 dígitos'
         } else if (!validateCPF(formData.primaryContact.cpf)) {
-          errors['primaryContact.cpf'] = 'CPF inválido'
+          errors['primaryContact.cpf'] = 'CPF inválido - verifique os dígitos'
         }
         if (!formData.primaryContact.rg.trim()) {
           errors['primaryContact.rg'] = 'RG é obrigatório'
@@ -205,6 +228,8 @@ export default function ProposalForm() {
         }
         if (!formData.primaryContact.phone.trim()) {
           errors['primaryContact.phone'] = 'Telefone é obrigatório'
+        } else if (!validatePhone(formData.primaryContact.phone)) {
+          errors['primaryContact.phone'] = 'Telefone deve ter pelo menos 10 dígitos'
         }
         if (!formData.primaryContact.address.trim()) {
           errors['primaryContact.address'] = 'Endereço é obrigatório'
@@ -212,7 +237,7 @@ export default function ProposalForm() {
         if (!formData.primaryContact.zipCode.trim()) {
           errors['primaryContact.zipCode'] = 'CEP é obrigatório'
         } else if (!validateCEP(formData.primaryContact.zipCode)) {
-          errors['primaryContact.zipCode'] = 'CEP inválido'
+          errors['primaryContact.zipCode'] = 'CEP deve ter 8 dígitos'
         }
         if (!formData.primaryContact.city.trim()) {
           errors['primaryContact.city'] = 'Cidade é obrigatória'
@@ -226,71 +251,101 @@ export default function ProposalForm() {
         break
 
       case 3: // Additional Contact
-        if (formData.additionalContact) {
-          const hasAnyField = !!(
-            formData.additionalContact.name.trim() ||
-            formData.additionalContact.cpf.trim() ||
-            formData.additionalContact.rg.trim() ||
-            formData.additionalContact.nationality ||
-            formData.additionalContact.maritalStatus ||
-            formData.additionalContact.birthDate ||
-            formData.additionalContact.email.trim() ||
-            formData.additionalContact.phone.trim() ||
-            formData.additionalContact.address.trim() ||
-            formData.additionalContact.zipCode.trim() ||
-            formData.additionalContact.city.trim() ||
-            formData.additionalContact.neighborhood.trim() ||
-            formData.additionalContact.state
-          )
+        // Sempre tentar validar, mesmo se additionalContact for undefined
+        const additionalContact = formData.additionalContact || {
+          name: '',
+          cpf: '',
+          rg: '',
+          rgIssuer: '',
+          nationality: '',
+          maritalStatus: '',
+          birthDate: '',
+          email: '',
+          phone: '',
+          address: '',
+          zipCode: '',
+          city: '',
+          neighborhood: '',
+          state: '',
+          profession: ''
+        }
+        const hasAnyField = !!(
+          additionalContact.name?.trim() ||
+          additionalContact.cpf?.trim() ||
+          additionalContact.rg?.trim() ||
+          additionalContact.rgIssuer?.trim() ||
+          additionalContact.nationality ||
+          additionalContact.maritalStatus ||
+          additionalContact.birthDate ||
+          additionalContact.email?.trim() ||
+          additionalContact.phone?.trim() ||
+          additionalContact.address?.trim() ||
+          additionalContact.zipCode?.trim() ||
+          additionalContact.city?.trim() ||
+          additionalContact.neighborhood?.trim() ||
+          additionalContact.state ||
+          additionalContact.profession?.trim()
+        )
 
-          if (hasAnyField) {
-            if (!formData.additionalContact.name.trim()) {
+        if (hasAnyField) {
+            if (!additionalContact.name?.trim()) {
               errors['additionalContact.name'] = 'Nome é obrigatório'
+            } else if (!validateName(additionalContact.name)) {
+              errors['additionalContact.name'] = 'Nome deve conter pelo menos duas palavras'
             }
-            if (!formData.additionalContact.cpf.trim()) {
+            if (!additionalContact.cpf?.trim()) {
               errors['additionalContact.cpf'] = 'CPF é obrigatório'
-            } else if (!validateCPF(formData.additionalContact.cpf)) {
-              errors['additionalContact.cpf'] = 'CPF inválido'
+            } else if (!validateCPFMinLength(additionalContact.cpf)) {
+              errors['additionalContact.cpf'] = 'CPF deve ter 11 dígitos'
+            } else if (!validateCPF(additionalContact.cpf)) {
+              errors['additionalContact.cpf'] = 'CPF inválido - verifique os dígitos'
             }
-            if (!formData.additionalContact.rg.trim()) {
+            if (!additionalContact.rg?.trim()) {
               errors['additionalContact.rg'] = 'RG é obrigatório'
             }
-            if (!formData.additionalContact.nationality) {
+            if (!additionalContact.rgIssuer?.trim()) {
+              errors['additionalContact.rgIssuer'] = 'Órgão emissor do RG é obrigatório'
+            }
+            if (!additionalContact.nationality) {
               errors['additionalContact.nationality'] = 'Nacionalidade é obrigatória'
             }
-            if (!formData.additionalContact.maritalStatus) {
+            if (!additionalContact.maritalStatus) {
               errors['additionalContact.maritalStatus'] = 'Estado civil é obrigatório'
             }
-            if (!formData.additionalContact.birthDate) {
+            if (!additionalContact.birthDate) {
               errors['additionalContact.birthDate'] = 'Data de nascimento é obrigatória'
             }
-            if (!formData.additionalContact.email.trim()) {
+            if (!additionalContact.email?.trim()) {
               errors['additionalContact.email'] = 'E-mail é obrigatório'
-            } else if (!validateEmail(formData.additionalContact.email)) {
+            } else if (!validateEmail(additionalContact.email)) {
               errors['additionalContact.email'] = 'E-mail inválido'
             }
-            if (!formData.additionalContact.phone.trim()) {
+            if (!additionalContact.phone?.trim()) {
               errors['additionalContact.phone'] = 'Telefone é obrigatório'
+            } else if (!validatePhone(additionalContact.phone)) {
+              errors['additionalContact.phone'] = 'Telefone deve ter pelo menos 10 dígitos'
             }
-            if (!formData.additionalContact.address.trim()) {
+            if (!additionalContact.address?.trim()) {
               errors['additionalContact.address'] = 'Endereço é obrigatório'
             }
-            if (!formData.additionalContact.zipCode.trim()) {
+            if (!additionalContact.zipCode?.trim()) {
               errors['additionalContact.zipCode'] = 'CEP é obrigatório'
-            } else if (!validateCEP(formData.additionalContact.zipCode)) {
-              errors['additionalContact.zipCode'] = 'CEP inválido'
+            } else if (!validateCEP(additionalContact.zipCode || '')) {
+              errors['additionalContact.zipCode'] = 'CEP deve ter 8 dígitos'
             }
-            if (!formData.additionalContact.city.trim()) {
+            if (!additionalContact.city?.trim()) {
               errors['additionalContact.city'] = 'Cidade é obrigatória'
             }
-            if (!formData.additionalContact.neighborhood.trim()) {
+            if (!additionalContact.neighborhood?.trim()) {
               errors['additionalContact.neighborhood'] = 'Bairro é obrigatório'
             }
-            if (!formData.additionalContact.state) {
+            if (!additionalContact.state) {
               errors['additionalContact.state'] = 'Estado é obrigatório'
             }
+            if (!additionalContact.profession?.trim()) {
+              errors['additionalContact.profession'] = 'Profissão é obrigatória'
+            }
           }
-        }
         break
 
       case 4: // Property Data
@@ -300,10 +355,10 @@ export default function ProposalForm() {
         if (!formData.property.unit.trim()) {
           errors['property.unit'] = 'Unidade é obrigatória'
         }
-        if (!formData.property.floor.trim()) {
+        if (!formData.property.floor?.trim()) {
           errors['property.floor'] = 'Andar é obrigatório'
         }
-        if (!formData.property.tower.trim()) {
+        if (!formData.property.tower?.trim()) {
           errors['property.tower'] = 'Torre é obrigatória'
         }
         if (!formData.property.reservedUntil) {
@@ -350,15 +405,21 @@ export default function ProposalForm() {
         const contact = formData.primaryContact
         return !!(
           contact.name.trim() &&
+          validateName(contact.name) &&
           contact.cpf.trim() &&
+          validateCPFMinLength(contact.cpf) &&
+          validateCPF(contact.cpf) &&
           contact.rg.trim() &&
           contact.nationality &&
           contact.maritalStatus &&
           contact.birthDate &&
           contact.email.trim() &&
+          validateEmail(contact.email) &&
           contact.phone.trim() &&
+          validatePhone(contact.phone) &&
           contact.address.trim() &&
           contact.zipCode.trim() &&
+          validateCEP(contact.zipCode) &&
           contact.city.trim() &&
           contact.neighborhood.trim() &&
           contact.state
@@ -391,15 +452,21 @@ export default function ProposalForm() {
         // If any field is filled, all required fields must be filled
         return !!(
           additionalContact.name.trim() &&
+          validateName(additionalContact.name) &&
           additionalContact.cpf.trim() &&
+          validateCPFMinLength(additionalContact.cpf) &&
+          validateCPF(additionalContact.cpf) &&
           additionalContact.rg.trim() &&
           additionalContact.nationality &&
           additionalContact.maritalStatus &&
           additionalContact.birthDate &&
           additionalContact.email.trim() &&
+          validateEmail(additionalContact.email) &&
           additionalContact.phone.trim() &&
+          validatePhone(additionalContact.phone) &&
           additionalContact.address.trim() &&
           additionalContact.zipCode.trim() &&
+          validateCEP(additionalContact.zipCode) &&
           additionalContact.city.trim() &&
           additionalContact.neighborhood.trim() &&
           additionalContact.state
@@ -410,8 +477,8 @@ export default function ProposalForm() {
         return !!(
           property.development.trim() &&
           property.unit.trim() &&
-          property.floor.trim() &&
-          property.tower.trim() &&
+          (property.floor?.trim() || '') &&
+          (property.tower?.trim() || '') &&
           property.reservedUntil
         )
       
@@ -432,6 +499,32 @@ export default function ProposalForm() {
     }
   }, [formData])
 
+  const isContactSectionReady = useCallback((): boolean => {
+    const primaryComplete = isStepValid(2)
+    const additional = formData.additionalContact
+
+    const additionalAny = !!(additional && (
+      additional.name.trim() ||
+      additional.cpf.trim() ||
+      additional.rg.trim() ||
+      additional.nationality ||
+      additional.maritalStatus ||
+      additional.birthDate ||
+      additional.email.trim() ||
+      additional.phone.trim() ||
+      additional.address.trim() ||
+      additional.zipCode.trim() ||
+      additional.city.trim() ||
+      additional.neighborhood.trim() ||
+      additional.state
+    ))
+
+    const additionalComplete = additionalAny && isStepValid(3)
+
+    // Regra: libera step 4 se (principal completo e adicional vazio) OU (adicional completo)
+    return (primaryComplete && !additionalAny) || additionalComplete
+  }, [formData.additionalContact, isStepValid])
+
   useEffect(() => {
     if (userData && userData.role !== 'admin') {
       setCurrentStep(0)
@@ -444,13 +537,47 @@ export default function ProposalForm() {
   const canProceedToStep = (stepId: number): boolean => {
     if (stepId === 1) return true
     
-    // For step 3 (Additional Contact), check if step 2 is valid
-    if (stepId === 3) return isStepValid(2)
+    // Validação sequencial rigorosa: todos os steps anteriores devem estar válidos
+    for (let i = 1; i < stepId; i++) {
+      // Step 3 (Additional Contact) é opcional, mas se houver dados, deve ser válido
+      if (i === 3) {
+        // Se há dados no contato adicional, deve estar válido
+        if (formData.additionalContact) {
+          const hasAnyField = !!(
+            formData.additionalContact.name.trim() ||
+            formData.additionalContact.cpf.trim() ||
+            formData.additionalContact.rg.trim() ||
+            formData.additionalContact.nationality ||
+            formData.additionalContact.maritalStatus ||
+            formData.additionalContact.birthDate ||
+            formData.additionalContact.email.trim() ||
+            formData.additionalContact.phone.trim() ||
+            formData.additionalContact.address.trim() ||
+            formData.additionalContact.zipCode.trim() ||
+            formData.additionalContact.city.trim() ||
+            formData.additionalContact.neighborhood.trim() ||
+            formData.additionalContact.state
+          )
+          
+          if (hasAnyField && !isStepValid(3)) {
+            return false
+          }
+        }
+        continue // Step 3 é opcional se não há dados
+      }
+      
+      // Para todos os outros steps, verificar se estão válidos
+      if (!isStepValid(i)) {
+        return false
+      }
+    }
     
-    // For other steps, check if previous step is valid
-    if (stepId > 1) return isStepValid(stepId - 1)
+    // Para step 4, aplicar regra especial de readiness dos contatos
+    if (stepId === 4) {
+      return isContactSectionReady()
+    }
     
-    return false
+    return true
   }
 
   const isStepAccessible = (stepId: number): boolean => {
@@ -460,38 +587,8 @@ export default function ProposalForm() {
     // Always allow going back to previous steps
     if (stepId < currentStep) return true
     
-    // For steps after current step
-    if (stepId > currentStep) {
-      // Special case for Step 3 (Additional Contact) - needs Step 2 to be valid
-      if (stepId === 3) return isStepValid(2)
-      
-      // Check if this step was previously valid
-      if (isStepValid(stepId)) return true
-      
-      // Check if we can access the immediate next step
-      if (stepId === currentStep + 1) {
-        if (currentStep === 1) return isStepValid(1)
-        if (currentStep === 2) return isStepValid(2)
-        if (currentStep === 3) return isStepValid(3) // Step 3 is optional, so it's always valid
-        if (currentStep === 4) return isStepValid(4)
-        if (currentStep === 5) return isStepValid(5)
-      }
-      
-      // Check if all previous steps are valid (for accessing any future step)
-      let allPreviousValid = true
-      for (let i = 1; i < stepId; i++) {
-        if (i === 3) continue // Step 3 is optional, skip validation
-        if (!isStepValid(i)) {
-          allPreviousValid = false
-          break
-        }
-      }
-      if (allPreviousValid) return true
-      
-      return false
-    }
-    
-    return false
+    // For steps after current step, use the same logic as canProceedToStep
+    return canProceedToStep(stepId)
   }
 
   const handleStepClick = (stepId: number) => {
@@ -561,15 +658,68 @@ export default function ProposalForm() {
     })
   }
 
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [serverDetails, setServerDetails] = useState<Record<string, unknown> | null>(null)
+  const [isSearchingOpportunity, setIsSearchingOpportunity] = useState(false)
 
   const handlePublishProposal = async () => {
+    if (!userData) return
+
+    setValidationErrors({})
+
+    const payload = {
+      agencyId: userData.activeLocation,
+      opportunityId: formData.proposal.opportunityId,
+      proposalDate: formData.proposal.proposalDate,
+      proposalName: formData.proposal.proposalName || '',
+      responsible: formData.proposal.responsible,
+      reservedUntil: formData.property.reservedUntil,
+      unit: {
+        number: formData.property.unit,
+        tower: formData.property.tower,
+        floor: formData.property.floor
+      },
+      unitId: formData.property.unitId,
+      primaryContact: {
+        homioId: formData.primaryContact.homioId,
+        name: formData.primaryContact.name
+      },
+      secondaryContact: formData.additionalContact && formData.additionalContact.name ? {
+        homioId: formData.additionalContact.homioId,
+        name: formData.additionalContact.name
+      } : null,
+      installments: (formData.installments || []).map(i => ({
+        type: i.condition,
+        amountPerInstallment: i.value,
+        installmentsCount: i.quantity,
+        totalAmount: i.value * i.quantity,
+        startDate: i.date
+      }))
+    }
+
     try {
-      console.log('Publishing proposal:', formData)
-      // TODO: Implement actual API call to publish proposal
-      alert('Proposta publicada com sucesso!')
-    } catch (error) {
-      console.error('Error publishing proposal:', error)
-      alert('Erro ao publicar proposta. Tente novamente.')
+      console.log('[ProposalForm] Submitting payload:', payload)
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json().catch(() => null)
+      console.log('[ProposalForm] Server response:', res.status, data)
+      if (!res.ok) {
+        setServerError(typeof (data as Record<string, unknown>)?.error === 'string' ? (data as Record<string, unknown>).error as string : 'Erro ao salvar')
+        setServerDetails((data as Record<string, unknown>) ?? null)
+        setShowErrorModal(true)
+        return
+      }
+      setShowSuccessModal(true)
+    } catch (e) {
+      console.log('[ProposalForm] Network error:', e)
+      setServerError('Falha de rede')
+      setServerDetails(null)
+      setShowErrorModal(true)
     }
   }
 
@@ -582,7 +732,6 @@ export default function ProposalForm() {
             onDataChange={(data) => handleStepDataChange(1, data)}
             errors={validationErrors}
             onPrimaryContactPrefill={(contactData) => {
-              console.log('🔧 ProposalForm recebeu dados do contato:', contactData)
               setFormData(prev => ({
                 ...prev,
                 primaryContact: {
@@ -592,7 +741,6 @@ export default function ProposalForm() {
               }))
             }}
             onAdditionalContactPrefill={(contactData) => {
-              console.log('🔧 ProposalForm recebeu dados do contato adicional:', contactData)
               setFormData(prev => ({
                 ...prev,
                 additionalContact: {
@@ -617,6 +765,29 @@ export default function ProposalForm() {
                 }
               }))
             }}
+            onPropertyPrefill={(propertyData) => {
+              console.log('[ProposalForm] onPropertyPrefill chamado:', propertyData)
+              console.log('[ProposalForm] Dados de property atuais:', formData.property)
+              
+              const updatedProperty = {
+                ...formData.property,
+                ...propertyData,
+                buildingId: propertyData.buildingId,
+                unitId: propertyData.unitId,
+              }
+              
+              console.log('[ProposalForm] Property atualizado:', updatedProperty)
+              
+              setFormData(prev => {
+                const newFormData = {
+                  ...prev,
+                  property: updatedProperty,
+                }
+                console.log('[ProposalForm] FormData completo atualizado:', newFormData)
+                return newFormData
+              })
+            }}
+            onLoadingChange={setIsSearchingOpportunity}
           />
         )
       case 2:
@@ -653,10 +824,47 @@ export default function ProposalForm() {
         )
       case 6:
         return (
-          <SummaryStep
-            data={formData}
-            onPublish={handlePublishProposal}
-          />
+          <>
+            <SummaryStep
+              data={formData}
+              onPublish={handlePublishProposal}
+            />
+            <Dialog open={showSuccessModal} onOpenChange={(open) => {
+              if (!open) {
+                setShowSuccessModal(false)
+                router.push('/proposals')
+              }
+            }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Proposta criada</DialogTitle>
+                  <DialogDescription>A proposta foi salva com sucesso.</DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-2">
+                  <Button onClick={() => {
+                    setShowSuccessModal(false)
+                    router.push('/proposals')
+                  }}>OK</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={showErrorModal} onOpenChange={(open) => setShowErrorModal(open)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Falha ao salvar</DialogTitle>
+                  <DialogDescription>{serverError || 'Ocorreu um erro ao salvar a proposta.'}</DialogDescription>
+                </DialogHeader>
+                {serverDetails && (
+                  <div className="bg-neutral-50 p-3 rounded text-xs text-neutral-700 overflow-auto max-h-48">
+                    <pre className="whitespace-pre-wrap break-words">{JSON.stringify(serverDetails, null, 2)}</pre>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowErrorModal(false)}>Fechar</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
         )
       default:
         return (
@@ -670,11 +878,100 @@ export default function ProposalForm() {
   }
 
 
-  if (loading) {
+  const isCustomFieldsLoaded = Object.keys(customFieldIds.opportunityFields).length > 0 || 
+                               Object.keys(customFieldIds.contactFields).length > 0
+
+  if (loading || !userData || !isCustomFieldsLoaded) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Skeleton className="h-8 w-64 mb-6" />
-        <Skeleton className="h-96 w-full" />
+      <div className="min-h-screen bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex">
+            {/* Sidebar Skeleton */}
+            <div className="hidden lg:block w-96 bg-white border-r border-neutral-200 p-6">
+              <div className="sticky top-4">
+                <div className="mb-8">
+                  <div className="mb-6">
+                    <Skeleton className="h-8 w-48" />
+                  </div>
+                  <Skeleton className="h-8 w-64 mb-6" />
+                </div>
+
+                {/* Navigation Box Skeleton */}
+                <div className="bg-neutral-50 rounded-lg border border-neutral-200 p-4">
+                  <div className="space-y-4">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="flex items-center space-x-4">
+                        <Skeleton className="w-10 h-10 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-48" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content Skeleton */}
+            <div className="flex-1 p-6 lg:p-8">
+              <div className="max-w-4xl mx-auto">
+                {/* Mobile Progress Indicator Skeleton */}
+                <div className="lg:hidden mb-6 p-4 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="w-full h-2 rounded-full" />
+                </div>
+
+                {/* Card Container Skeleton */}
+                <div className="bg-white rounded-lg border border-neutral-200 shadow-sm">
+                  {/* Header Skeleton */}
+                  <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-48" />
+                      <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="w-8 h-8 rounded-lg" />
+                  </div>
+
+                  {/* Form Content Skeleton */}
+                  <div className="p-6 min-h-[600px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-10 w-full" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Buttons Skeleton */}
+                  <div className="flex justify-between items-center p-6 border-t border-neutral-200 bg-neutral-50">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-24" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -858,6 +1155,21 @@ export default function ProposalForm() {
           </div>
         </div>
       </div>
+
+      {/* Loading Modal para busca de oportunidade */}
+      <Dialog open={isSearchingOpportunity} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+            <DialogTitle className="text-lg font-semibold text-center">
+              Pesquisando Oportunidade
+            </DialogTitle>
+            <DialogDescription className="text-center text-neutral-600 mt-2">
+              Aguarde enquanto buscamos e preenchemos os dados da oportunidade...
+            </DialogDescription>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
