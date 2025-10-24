@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { authService } from '@/lib/auth/authService'
+import { userDataService } from '@/lib/auth/userDataService'
 import { userCache, CACHE_KEYS } from '@/lib/cache/userCache'
 import { dataService } from '@/lib/services/dataService'
 import type { UserData, UseUserDataReturn } from '@/lib/types'
@@ -82,36 +83,37 @@ export default function useUserData(): UseUserDataReturn {
                     console.log('✅ USER_DATA_HOOK - Dados iniciais carregados')
                 } catch (error) {
                     console.error('❌ USER_DATA_HOOK - Erro ao inicializar sessão mock:', error)
-                    setError('Failed to initialize session in development')
+                    setError('Failed to initialize mock session')
                 }
-                setLoading(false)
-                return
+            } else {
+                console.log('🌐 USER_DATA_HOOK - Modo produção detectado - obtendo dados reais do usuário')
+                
+                try {
+                    console.log('📡 USER_DATA_HOOK - Solicitando dados do usuário via userDataService')
+                    const realUserData = await userDataService.getUserData()
+                    console.log('✅ USER_DATA_HOOK - Dados reais do usuário obtidos:', {
+                        userId: realUserData.userId,
+                        email: realUserData.email,
+                        role: realUserData.role
+                    })
+                    
+                    console.log('🔐 USER_DATA_HOOK - Inicializando sessão com dados reais')
+                    await authService.initializeSession(realUserData)
+                    console.log('✅ USER_DATA_HOOK - Sessão real inicializada com sucesso')
+                    
+                    setUserData(realUserData)
+                    console.log('📊 USER_DATA_HOOK - UserData real definido no estado')
+                    
+                    console.log('📡 USER_DATA_HOOK - Buscando dados iniciais')
+                    await fetchInitialData(realUserData)
+                    console.log('✅ USER_DATA_HOOK - Dados iniciais carregados')
+                } catch (error) {
+                    console.error('❌ USER_DATA_HOOK - Erro ao obter dados reais do usuário:', error)
+                    setError('Failed to get user data from parent window')
+                }
             }
-
-            console.log('🔍 USER_DATA_HOOK - Modo produção - verificando cache')
-            userCache.clear()
-            console.log('🗑️ USER_DATA_HOOK - Cache limpo')
             
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('sb-refresh-token')
-                console.log('🗑️ USER_DATA_HOOK - Refresh token removido do localStorage')
-            }
-
-            const cachedData = userCache.get<UserData>(cacheKey)
-            if (cachedData) {
-                console.log('✅ USER_DATA_HOOK - Dados encontrados no cache:', {
-                    userId: cachedData.userId,
-                    email: cachedData.email,
-                    role: cachedData.role
-                })
-                setUserData(cachedData)
-                await fetchInitialData(cachedData)
-                setLoading(false)
-                return
-            }
-
-            console.log('🔍 USER_DATA_HOOK - Dados não encontrados no cache, inicializando sessão')
-            await initializeUserSession(cacheKey)
+            setLoading(false)
         }
 
         handleAuthentication()
