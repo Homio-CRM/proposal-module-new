@@ -11,9 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
   },
   output: 'standalone',
-  experimental: {
-    outputFileTracingRoot: process.cwd(),
-  },
+  outputFileTracingRoot: process.cwd(),
 };
 
 export default nextConfig;
