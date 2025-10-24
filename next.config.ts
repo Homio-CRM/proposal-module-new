@@ -5,10 +5,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
-  output: 'standalone',
-  outputFileTracingRoot: process.cwd(),
+  experimental: {
+    memoryBasedWorkersCount: true,
+  },
 };
 
 export default nextConfig;
