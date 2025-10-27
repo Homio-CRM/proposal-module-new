@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
+import { dataService } from '@/lib/services/dataService'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
@@ -670,12 +671,50 @@ export default function ProposalForm() {
     setValidationErrors({})
 
     try {
+      // Buscar configuração da agência para obter os IDs dos custom fields
+      const agencyConfig = await dataService.fetchAgencyConfig(userData.activeLocation)
+      
       // Preparar dados dos contatos para update
       const prepareContactData = (contact: ContactData & { customFields?: Array<{ id: string; value?: string; fieldValueString?: string; fieldValueLabel?: string; fieldValueFormatted?: string }> }) => {
         const customFields = contact.customFields ? contact.customFields.map((field) => ({
           id: field.id,
           field_value: field.value || field.fieldValueString || field.fieldValueLabel || field.fieldValueFormatted || ''
         })) : []
+
+        // Adicionar custom fields de empreendimento, unidade, andar e torre
+        if (formData.property && agencyConfig) {
+          // Adicionar empreendimento
+          if (agencyConfig.contact_building && formData.property.development) {
+            customFields.push({
+              id: agencyConfig.contact_building,
+              field_value: formData.property.development
+            })
+          }
+          
+          // Adicionar unidade
+          if (agencyConfig.contact_unit && formData.property.unit) {
+            customFields.push({
+              id: agencyConfig.contact_unit,
+              field_value: formData.property.unit
+            })
+          }
+          
+          // Adicionar andar
+          if (agencyConfig.contact_floor && formData.property.floor) {
+            customFields.push({
+              id: agencyConfig.contact_floor,
+              field_value: formData.property.floor
+            })
+          }
+          
+          // Adicionar torre
+          if (agencyConfig.contact_tower && formData.property.tower) {
+            customFields.push({
+              id: agencyConfig.contact_tower,
+              field_value: formData.property.tower
+            })
+          }
+        }
 
         return {
           name: contact.name,
@@ -779,7 +818,7 @@ export default function ProposalForm() {
         return
       }
       setShowSuccessModal(true)
-    } catch (e) {
+    } catch {
       setServerError('Falha de rede')
       setServerDetails(null)
       setShowErrorModal(true)
