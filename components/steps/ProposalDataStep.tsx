@@ -183,7 +183,6 @@ export default function ProposalDataStep({
 
                   const opp = await oppRes.json()
                   
-                  console.log('[AutoSelect] Response da API get opportunity:', { name: opp.name, customFields: opp.customFields })
                   
                   if (!opp || !opp.name) {
                     setOpportunityError('Oportunidade não encontrada')
@@ -191,7 +190,6 @@ export default function ProposalDataStep({
                   }
 
                   const fieldMappings = getAllMappings()
-                  console.log('[AutoSelect] Mapeamentos carregados - opportunity fields:', fieldMappings.opportunityFields)
                   const updatedData = { ...formData }
                   
                   if (opp.name) {
@@ -206,11 +204,6 @@ export default function ProposalDataStep({
                             const extractedValue = extractCustomFieldString(field)
                             if (extractedValue !== null) {
                               opportunityCustomFields[field.id] = extractedValue
-                              console.log('[AutoSelect] Campo custom extraído:', {
-                                fieldId: field.id,
-                                fieldType: field.type,
-                                extractedValue: extractedValue
-                              })
                             }
                           }
                         })
@@ -219,12 +212,6 @@ export default function ProposalDataStep({
                     
                     fieldMappings.opportunityFields.forEach(mapping => {
                       const customFieldValue = opportunityCustomFields[mapping.customFieldId]
-                      console.log('[AutoSelect] Processando mapeamento:', {
-                        formField: mapping.formField,
-                        customFieldId: mapping.customFieldId,
-                        hasValue: customFieldValue !== undefined && customFieldValue !== null,
-                        value: customFieldValue
-                      })
                       
                       if (customFieldValue !== undefined && customFieldValue !== null) {
                         switch (mapping.formField) {
@@ -255,21 +242,9 @@ export default function ProposalDataStep({
                             // Adicionar um dia para corrigir o offset
                             const correctedDateValue = extractedDateValue ? addOneDayISO(extractedDateValue) : ''
                             
-                            console.log('[AutoSelect] RESERVADO ATÉ - Processando:', {
-                              formField: mapping.formField,
-                              customFieldId: mapping.customFieldId,
-                              customFieldValue,
-                              customFieldValueType: typeof customFieldValue,
-                              extractedDateValue,
-                              correctedDateValue,
-                              finalValue: correctedDateValue
-                            })
                             
                             propertyData.reservedUntil = correctedDateValue
                             
-                            console.log('[AutoSelect] RESERVADO ATÉ - Campo definido:', {
-                              propertyDataReservedUntil: propertyData.reservedUntil
-                            })
                             break
                         }
                       }
@@ -278,7 +253,6 @@ export default function ProposalDataStep({
                     // Buscar e selecionar automaticamente building e unit por nome
                     if (propertyData.development) {
                       try {
-                        console.log('[AutoSelect] Empreendimento encontrado:', propertyData.development)
                         const supabase = await getSupabase()
                         
                         // Buscar building por nome
@@ -328,10 +302,6 @@ export default function ProposalDataStep({
                     
                     // Sempre chamar onPropertyPrefill
                     if (onPropertyPrefill) {
-                      console.log('[AutoSelect] RESERVADO ATÉ - Chamando onPropertyPrefill:', {
-                        reservedUntil: propertyData.reservedUntil,
-                        allPropertyData: propertyData
-                      })
                       onPropertyPrefill(propertyData)
                     }
                   }

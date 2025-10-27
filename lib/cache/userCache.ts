@@ -49,7 +49,6 @@ class UserCache {
     debug(): void {
         for (const [, item] of Array.from(this.cache.entries())) {
             const isExpired = Date.now() - item.timestamp > item.ttl
-            console.log('Cache item:', { isExpired, ttl: item.ttl })
         }
     }
 }

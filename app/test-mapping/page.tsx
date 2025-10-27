@@ -35,8 +35,6 @@ export default function TestMappingPage() {
 
   const handleTestMappings = () => {
     const mappings = getAllMappings()
-    console.log('🔍 Mapeamentos atuais:', mappings)
-    console.log('🔍 Custom Field IDs:', customFieldIds)
   }
 
   return (

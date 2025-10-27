@@ -376,69 +376,51 @@ class DataService {
       
       // 4. Check if contacts are used by other proposals before deleting
       if (proposal.primary_contact_id) {
-        console.log('Verificando contato primário:', proposal.primary_contact_id)
         
         const { count: primaryCount, error: primaryCountError } = await supabase
           .from('proposals')
           .select('id', { count: 'exact', head: true })
           .or(`primary_contact_id.eq.${proposal.primary_contact_id},secondary_contact_id.eq.${proposal.primary_contact_id}`)
 
-        console.log('Contagem de uso do contato primário:', primaryCount, 'Erro:', primaryCountError)
 
         if (primaryCountError) {
           throw new Error(`Erro ao verificar uso do contato primário: ${primaryCountError.message}`)
         }
 
         if (!primaryCount || primaryCount === 0) {
-          console.log('Deletando contato primário:', proposal.primary_contact_id)
           const { error: deletePrimaryError } = await supabase
             .from('contacts')
             .delete()
             .eq('id', proposal.primary_contact_id)
           
           if (deletePrimaryError) {
-            console.error('Erro ao deletar contato primário:', deletePrimaryError)
-            console.error('Detalhes do erro:', deletePrimaryError.code, deletePrimaryError.hint)
             throw new Error(`Erro ao deletar contato primário: ${deletePrimaryError.message}`)
-          } else {
-            console.log('Contato primário deletado com sucesso')
           }
-        } else {
-          console.log('Contato primário ainda em uso, não deletando')
         }
       }
 
       if (proposal.secondary_contact_id) {
-        console.log('Verificando contato secundário:', proposal.secondary_contact_id)
         
         const { count: secondaryCount, error: secondaryCountError } = await supabase
           .from('proposals')
           .select('id', { count: 'exact', head: true })
           .or(`primary_contact_id.eq.${proposal.secondary_contact_id},secondary_contact_id.eq.${proposal.secondary_contact_id}`)
 
-        console.log('Contagem de uso do contato secundário:', secondaryCount, 'Erro:', secondaryCountError)
 
         if (secondaryCountError) {
           throw new Error(`Erro ao verificar uso do contato secundário: ${secondaryCountError.message}`)
         }
 
         if (!secondaryCount || secondaryCount === 0) {
-          console.log('Deletando contato secundário:', proposal.secondary_contact_id)
           const { error: deleteSecondaryError } = await supabase
             .from('contacts')
             .delete()
             .eq('id', proposal.secondary_contact_id)
           
           if (deleteSecondaryError) {
-            console.error('Erro ao deletar contato secundário:', deleteSecondaryError)
-            console.error('Detalhes do erro:', deleteSecondaryError.code, deleteSecondaryError.hint)
             throw new Error(`Erro ao deletar contato secundário: ${deleteSecondaryError.message}`)
-          } else {
-            console.log('Contato secundário deletado com sucesso')
-          }
-        } else {
-          console.log('Contato secundário ainda em uso, não deletando')
-        }
+          } 
+        } 
       }
       
     } catch (error) {

@@ -157,7 +157,6 @@ export default function ProposalsPage() {
   const handleBulkDelete = () => {
     if (selectedProposals.length > 0) {
       // TODO: Implementar exclusão em massa
-      console.log('Deletando propostas:', selectedProposals);
       setSelectedProposals([]);
     }
   };

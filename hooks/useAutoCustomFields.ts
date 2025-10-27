@@ -18,7 +18,6 @@ export function useAutoCustomFields() {
       const hasContactFields = Object.keys(customFieldIds.contactFields).length > 0
       
       if (hasOpportunityFields || hasContactFields) {
-        console.log('✅ Custom fields já carregados, pulando...')
         return
       }
 
