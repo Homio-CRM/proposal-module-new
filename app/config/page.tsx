@@ -15,13 +15,15 @@ interface ConfigData {
   opportunityFields: {
     empreendimento: string
     unidade: string
-    andar: string
-    torre: string
     responsavel: string
     observacoes: string
     reserve_until: string
   }
   contactFields: {
+    empreendimento: string
+    unidade: string
+    andar: string
+    torre: string
     cpf: string
     rg: string
     orgaoEmissor: string
@@ -49,13 +51,15 @@ export default function ConfigPage() {
     opportunityFields: {
       empreendimento: '',
       unidade: '',
-      andar: '',
-      torre: '',
       responsavel: '',
       observacoes: '',
       reserve_until: ''
     },
     contactFields: {
+      empreendimento: '',
+      unidade: '',
+      andar: '',
+      torre: '',
       cpf: '',
       rg: '',
       orgaoEmissor: '',
@@ -73,7 +77,7 @@ export default function ConfigPage() {
   const [configLoading, setConfigLoading] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
-  const agencyName = agencyConfig?.name || "MIVITA"
+  const agencyName = agencyConfig?.opportunity_name || "MIVITA"
   const locationId = userData?.activeLocation || ''
 
   useEffect(() => {
@@ -97,26 +101,28 @@ export default function ConfigPage() {
         // Preencher campos imediatamente
         const newConfigData = {
           opportunityFields: {
-            empreendimento: config.building || '',
-            unidade: config.unit || '',
-            andar: config.floor || '',
-            torre: config.tower || '',
-            responsavel: config.responsible || '',
-            observacoes: config.observations || '',
-            reserve_until: config.reserve_until || ''
+            empreendimento: config.opportunity_building || '',
+            unidade: config.opportunity_unit || '',
+            responsavel: config.opportunity_responsible || '',
+            observacoes: config.opportunity_observations || '',
+            reserve_until: config.opportunity_reserve_until || ''
           },
           contactFields: {
-            cpf: config.cpf || '',
-            rg: config.rg || '',
-            orgaoEmissor: config.rg_issuer || '',
-            nacionalidade: config.nationality || '',
-            estadoCivil: config.marital_status || '',
-            profissao: config.profession || '',
-            cep: config.postal_code || '',
-            endereco: config.address || '',
-            cidade: config.city || '',
-            bairro: config.neighborhood || '',
-            estado: config.state || ''
+            empreendimento: config.contact_building || '',
+            unidade: config.contact_unit || '',
+            andar: config.contact_floor || '',
+            torre: config.contact_tower || '',
+            cpf: config.contact_cpf || '',
+            rg: config.contact_rg || '',
+            orgaoEmissor: config.contact_rg_issuer || '',
+            nacionalidade: config.contact_nationality || '',
+            estadoCivil: config.contact_marital_status || '',
+            profissao: config.contact_profession || '',
+            cep: config.contact_postal_code || '',
+            endereco: config.contact_address || '',
+            cidade: config.contact_city || '',
+            bairro: config.contact_neighborhood || '',
+            estado: config.contact_state || ''
           }
         };
         setConfigData(newConfigData);
@@ -124,9 +130,11 @@ export default function ConfigPage() {
         // 2. Buscar custom field IDs em background (não bloquear)
         dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, config)
           .then(customFieldIds => {
+            console.log('🔍 [ConfigPage] Custom field IDs recebidos:', customFieldIds);
             setCustomFieldIdsRef.current(customFieldIds);
           })
           .catch(error => {
+            console.error('❌ [ConfigPage] Erro ao buscar custom field IDs:', error);
           });
 
       } catch (error) {
@@ -284,11 +292,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('opportunityFields', 'empreendimento', e.target.value)}
                   placeholder="Campo para empreendimento"
                 />
-                {getCustomFieldId('opportunityFields', 'empreendimento', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'empreendimento', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('opportunityFields', 'empreendimento', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="unidade" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -300,43 +306,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('opportunityFields', 'unidade', e.target.value)}
                   placeholder="Campo para unidade"
                 />
-                {getCustomFieldId('opportunityFields', 'unidade', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'unidade', configData)}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="andar" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Andar
-                </label>
-                <Input
-                  id="andar"
-                  value={configData.opportunityFields.andar}
-                  onChange={(e) => handleInputChange('opportunityFields', 'andar', e.target.value)}
-                  placeholder="Campo para andar"
-                />
-                {getCustomFieldId('opportunityFields', 'andar', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'andar', configData)}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="torre" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Torre
-                </label>
-                <Input
-                  id="torre"
-                  value={configData.opportunityFields.torre}
-                  onChange={(e) => handleInputChange('opportunityFields', 'torre', e.target.value)}
-                  placeholder="Campo para torre"
-                />
-                {getCustomFieldId('opportunityFields', 'torre', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'torre', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('opportunityFields', 'unidade', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="responsavel" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -348,11 +320,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('opportunityFields', 'responsavel', e.target.value)}
                   placeholder="Campo para responsável"
                 />
-                {getCustomFieldId('opportunityFields', 'responsavel', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'responsavel', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('opportunityFields', 'responsavel', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="observacoes" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -364,11 +334,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('opportunityFields', 'observacoes', e.target.value)}
                   placeholder="Campo para observações"
                 />
-                {getCustomFieldId('opportunityFields', 'observacoes', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'observacoes', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('opportunityFields', 'observacoes', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="reserve_until" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -380,11 +348,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('opportunityFields', 'reserve_until', e.target.value)}
                   placeholder="Campo para reservado até"
                 />
-                {getCustomFieldId('opportunityFields', 'reserve_until', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('opportunityFields', 'reserve_until', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('opportunityFields', 'reserve_until', configData) || 'ID não encontrado'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -398,6 +364,62 @@ export default function ConfigPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
+                <label htmlFor="empreendimento" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Empreendimento
+                </label>
+                <Input
+                  id="empreendimento"
+                  value={configData.contactFields.empreendimento}
+                  onChange={(e) => handleInputChange('contactFields', 'empreendimento', e.target.value)}
+                  placeholder="Campo para empreendimento"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'empreendimento', configData) || 'ID não encontrado'}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="unidade" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Unidade
+                </label>
+                <Input
+                  id="unidade"
+                  value={configData.contactFields.unidade}
+                  onChange={(e) => handleInputChange('contactFields', 'unidade', e.target.value)}
+                  placeholder="Campo para unidade"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'unidade', configData) || 'ID não encontrado'}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="andar" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Andar
+                </label>
+                <Input
+                  id="andar"
+                  value={configData.contactFields.andar}
+                  onChange={(e) => handleInputChange('contactFields', 'andar', e.target.value)}
+                  placeholder="Campo para andar"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'andar', configData) || 'ID não encontrado'}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="torre" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Torre
+                </label>
+                <Input
+                  id="torre"
+                  value={configData.contactFields.torre}
+                  onChange={(e) => handleInputChange('contactFields', 'torre', e.target.value)}
+                  placeholder="Campo para torre"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'torre', configData) || 'ID não encontrado'}
+                </p>
+              </div>
+              <div>
                 <label htmlFor="cpf" className="block text-sm font-medium text-neutral-700 mb-2">
                   CPF
                 </label>
@@ -407,11 +429,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'cpf', e.target.value)}
                   placeholder="Campo para CPF"
                 />
-                {getCustomFieldId('contactFields', 'cpf', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'cpf', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'cpf', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="rg" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -423,11 +443,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'rg', e.target.value)}
                   placeholder="Campo para RG"
                 />
-                {getCustomFieldId('contactFields', 'rg', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'rg', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'rg', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="orgaoEmissor" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -439,11 +457,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'orgaoEmissor', e.target.value)}
                   placeholder="Campo para órgão emissor"
                 />
-                {getCustomFieldId('contactFields', 'orgaoEmissor', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'orgaoEmissor', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'orgaoEmissor', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="nacionalidade" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -455,11 +471,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'nacionalidade', e.target.value)}
                   placeholder="Campo para nacionalidade"
                 />
-                {getCustomFieldId('contactFields', 'nacionalidade', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'nacionalidade', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'nacionalidade', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="estadoCivil" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -471,11 +485,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'estadoCivil', e.target.value)}
                   placeholder="Campo para estado civil"
                 />
-                {getCustomFieldId('contactFields', 'estadoCivil', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'estadoCivil', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'estadoCivil', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="profissao" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -487,11 +499,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'profissao', e.target.value)}
                   placeholder="Campo para profissão"
                 />
-                {getCustomFieldId('contactFields', 'profissao', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'profissao', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'profissao', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="cep" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -503,11 +513,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'cep', e.target.value)}
                   placeholder="Campo para CEP"
                 />
-                {getCustomFieldId('contactFields', 'cep', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'cep', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'cep', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="endereco" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -519,11 +527,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'endereco', e.target.value)}
                   placeholder="Campo para endereço"
                 />
-                {getCustomFieldId('contactFields', 'endereco', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'endereco', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'endereco', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="cidade" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -535,11 +541,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'cidade', e.target.value)}
                   placeholder="Campo para cidade"
                 />
-                {getCustomFieldId('contactFields', 'cidade', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'cidade', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'cidade', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="bairro" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -551,11 +555,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'bairro', e.target.value)}
                   placeholder="Campo para bairro"
                 />
-                {getCustomFieldId('contactFields', 'bairro', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'bairro', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'bairro', configData) || 'ID não encontrado'}
+                </p>
               </div>
               <div>
                 <label htmlFor="estado" className="block text-sm font-medium text-neutral-700 mb-2">
@@ -567,11 +569,9 @@ export default function ConfigPage() {
                   onChange={(e) => handleInputChange('contactFields', 'estado', e.target.value)}
                   placeholder="Campo para estado"
                 />
-                {getCustomFieldId('contactFields', 'estado', configData) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'estado', configData)}
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  ID: {getCustomFieldId('contactFields', 'estado', configData) || 'ID não encontrado'}
+                </p>
               </div>
             </div>
           </CardContent>

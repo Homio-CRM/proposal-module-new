@@ -7,25 +7,27 @@ import type { ProposalListItem, ProposalFormData } from '@/lib/types/proposal'
 export interface AgencyConfig {
   id: string
   location_id: string
-  name: string
-  building: string | null
-  unit: string | null
-  floor: string | null
-  tower: string | null
-  responsible: string | null
-  observations: string | null
-  reserve_until: string | null
-  cpf: string | null
-  rg: string | null
-  rg_issuer: string | null
-  nationality: string | null
-  marital_status: string | null
-  profession: string | null
-  postal_code: string | null
-  address: string | null
-  city: string | null
-  neighborhood: string | null
-  state: string | null
+  opportunity_name: string
+  opportunity_building: string | null
+  opportunity_unit: string | null
+  opportunity_responsible: string | null
+  opportunity_observations: string | null
+  opportunity_reserve_until: string | null
+  contact_building: string | null
+  contact_unit: string | null
+  contact_floor: string | null
+  contact_tower: string | null
+  contact_cpf: string | null
+  contact_rg: string | null
+  contact_rg_issuer: string | null
+  contact_nationality: string | null
+  contact_marital_status: string | null
+  contact_profession: string | null
+  contact_postal_code: string | null
+  contact_address: string | null
+  contact_city: string | null
+  contact_neighborhood: string | null
+  contact_state: string | null
   created_at: string
   updated_at: string
 }
@@ -433,13 +435,15 @@ class DataService {
     opportunityFields: {
       empreendimento: string
       unidade: string
-      andar: string
-      torre: string
       responsavel: string
       observacoes: string
       reserve_until: string
     }
     contactFields: {
+      empreendimento: string
+      unidade: string
+      andar: string
+      torre: string
       cpf: string
       rg: string
       orgaoEmissor: string
@@ -458,24 +462,26 @@ class DataService {
       const supabase = await getSupabase()
       
       const updateData = {
-        building: configData.opportunityFields.empreendimento || null,
-        unit: configData.opportunityFields.unidade || null,
-        floor: configData.opportunityFields.andar || null,
-        tower: configData.opportunityFields.torre || null,
-        responsible: configData.opportunityFields.responsavel || null,
-        observations: configData.opportunityFields.observacoes || null,
-        reserve_until: configData.opportunityFields.reserve_until || null,
-        cpf: configData.contactFields.cpf || null,
-        rg: configData.contactFields.rg || null,
-        rg_issuer: configData.contactFields.orgaoEmissor || null,
-        nationality: configData.contactFields.nacionalidade || null,
-        marital_status: configData.contactFields.estadoCivil || null,
-        profession: configData.contactFields.profissao || null,
-        postal_code: configData.contactFields.cep || null,
-        address: configData.contactFields.endereco || null,
-        city: configData.contactFields.cidade || null,
-        neighborhood: configData.contactFields.bairro || null,
-        state: configData.contactFields.estado || null,
+        opportunity_building: configData.opportunityFields.empreendimento || null,
+        opportunity_unit: configData.opportunityFields.unidade || null,
+        opportunity_responsible: configData.opportunityFields.responsavel || null,
+        opportunity_observations: configData.opportunityFields.observacoes || null,
+        opportunity_reserve_until: configData.opportunityFields.reserve_until || null,
+        contact_building: configData.contactFields.empreendimento || null,
+        contact_unit: configData.contactFields.unidade || null,
+        contact_floor: configData.contactFields.andar || null,
+        contact_tower: configData.contactFields.torre || null,
+        contact_cpf: configData.contactFields.cpf || null,
+        contact_rg: configData.contactFields.rg || null,
+        contact_rg_issuer: configData.contactFields.orgaoEmissor || null,
+        contact_nationality: configData.contactFields.nacionalidade || null,
+        contact_marital_status: configData.contactFields.estadoCivil || null,
+        contact_profession: configData.contactFields.profissao || null,
+        contact_postal_code: configData.contactFields.cep || null,
+        contact_address: configData.contactFields.endereco || null,
+        contact_city: configData.contactFields.cidade || null,
+        contact_neighborhood: configData.contactFields.bairro || null,
+        contact_state: configData.contactFields.estado || null,
         updated_at: new Date().toISOString()
       }
 
@@ -509,27 +515,29 @@ class DataService {
   }> {
     // Extrair keys não-nulas dos campos
     const opportunityKeys = [
-      config.building,
-      config.unit,
-      config.floor,
-      config.tower,
-      config.responsible,
-      config.observations,
-      config.reserve_until
+      config.opportunity_building,
+      config.opportunity_unit,
+      config.opportunity_responsible,
+      config.opportunity_observations,
+      config.opportunity_reserve_until
     ].filter(key => key && key.trim())
 
     const contactKeys = [
-      config.cpf,
-      config.rg,
-      config.rg_issuer,
-      config.nationality,
-      config.marital_status,
-      config.profession,
-      config.postal_code,
-      config.address,
-      config.city,
-      config.neighborhood,
-      config.state
+      config.contact_building,
+      config.contact_unit,
+      config.contact_floor,
+      config.contact_tower,
+      config.contact_cpf,
+      config.contact_rg,
+      config.contact_rg_issuer,
+      config.contact_nationality,
+      config.contact_marital_status,
+      config.contact_profession,
+      config.contact_postal_code,
+      config.contact_address,
+      config.contact_city,
+      config.contact_neighborhood,
+      config.contact_state
     ].filter(key => key && key.trim())
 
     // Buscar IDs dos custom fields
@@ -565,26 +573,29 @@ class DataService {
 
     // Extrair keys não-nulas dos campos
     const opportunityKeys = [
-      config.building,
-      config.unit,
-      config.floor,
-      config.tower,
-      config.responsible,
-      config.observations
+      config.opportunity_building,
+      config.opportunity_unit,
+      config.opportunity_responsible,
+      config.opportunity_observations,
+      config.opportunity_reserve_until
     ].filter(key => key && key.trim())
 
     const contactKeys = [
-      config.cpf,
-      config.rg,
-      config.rg_issuer,
-      config.nationality,
-      config.marital_status,
-      config.profession,
-      config.postal_code,
-      config.address,
-      config.city,
-      config.neighborhood,
-      config.state
+      config.contact_building,
+      config.contact_unit,
+      config.contact_floor,
+      config.contact_tower,
+      config.contact_cpf,
+      config.contact_rg,
+      config.contact_rg_issuer,
+      config.contact_nationality,
+      config.contact_marital_status,
+      config.contact_profession,
+      config.contact_postal_code,
+      config.contact_address,
+      config.contact_city,
+      config.contact_neighborhood,
+      config.contact_state
     ].filter(key => key && key.trim())
 
 
@@ -606,13 +617,15 @@ class DataService {
     opportunityFields: {
       empreendimento: string
       unidade: string
-      andar: string
-      torre: string
       responsavel: string
       observacoes: string
       reserve_until: string
     }
     contactFields: {
+      empreendimento: string
+      unidade: string
+      andar: string
+      torre: string
       cpf: string
       rg: string
       orgaoEmissor: string
