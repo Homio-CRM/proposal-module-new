@@ -65,16 +65,20 @@ class CustomFieldsService {
       const opportunityFieldIds: Record<string, string> = {}
       const contactFieldIds: Record<string, string> = {}
 
-      // Mapeamento de keys para nomes de campos do formulário
+      // Mapeamento de keys para nomes de campos do formulário (usando key WITHOUT prefix)
       const opportunityFieldMapping: Record<string, string> = {
+        'building': 'empreendimento',
+        'unit': 'unidade',
         'empreendimento': 'empreendimento',
         'unidade': 'unidade', 
         'andar': 'andar',
         'torre': 'torre',
-        'opportunityresponsavel': 'responsavel',
+        'responsible': 'responsavel',
+        'observations': 'observacoes',
         'observacoes': 'observacoes',
         'reserve_until': 'reserve_until',
-        'reservar_at': 'reserve_until'
+        'reservar_at': 'reserve_until',
+        'reserveUntil': 'reserve_until'
       }
 
       const contactFieldMapping: Record<string, string> = {
@@ -94,12 +98,25 @@ class CustomFieldsService {
       // Processar opportunity fields
       opportunityKeys.forEach((key: string) => {
         if (key && key.trim()) {
+          console.log(`🔍 [CustomFieldsService] Processando opportunity key: "${key}"`)
+          
+          // Remover prefixo opportunity_ se existir
+          const keyWithoutPrefix = key.replace(/^opportunity_/, '')
+          console.log(`🔍 [CustomFieldsService] Key sem prefixo: "${keyWithoutPrefix}"`)
+          
           // Procurar por fieldKey que corresponde a opportunity.[key]
-          const fieldKey = `opportunity.${key}`
+          const fieldKey = `opportunity.${keyWithoutPrefix}`
+          console.log(`🔍 [CustomFieldsService] Buscando fieldKey: "${fieldKey}"`)
+          
           const field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+          console.log(`🔍 [CustomFieldsService] Campo encontrado:`, field)
+          
           if (field) {
-            const formFieldName = opportunityFieldMapping[key] || key
+            const formFieldName = opportunityFieldMapping[keyWithoutPrefix] || keyWithoutPrefix
+            console.log(`🔍 [CustomFieldsService] FormFieldName: "${formFieldName}"`)
             opportunityFieldIds[formFieldName] = field.id
+          } else {
+            console.log(`⚠️ [CustomFieldsService] Campo não encontrado para key: "${key}"`)
           }
         }
       })
@@ -107,15 +124,31 @@ class CustomFieldsService {
       // Processar contact fields
       contactKeys.forEach((key: string) => {
         if (key && key.trim()) {
+          console.log(`🔍 [CustomFieldsService] Processando contact key: "${key}"`)
+          
+          // Remover prefixo contact_ se existir
+          const keyWithoutPrefix = key.replace(/^contact_/, '')
+          console.log(`🔍 [CustomFieldsService] Key sem prefixo: "${keyWithoutPrefix}"`)
+          
           // Procurar por fieldKey que corresponde a contact.[key]
-          const fieldKey = `contact.${key}`
+          const fieldKey = `contact.${keyWithoutPrefix}`
+          console.log(`🔍 [CustomFieldsService] Buscando fieldKey: "${fieldKey}"`)
+          
           const field = contactFields.find((f: CustomField) => f.fieldKey === fieldKey)
+          console.log(`🔍 [CustomFieldsService] Campo encontrado:`, field)
+          
           if (field) {
-            const formFieldName = contactFieldMapping[key] || key
+            const formFieldName = contactFieldMapping[keyWithoutPrefix] || keyWithoutPrefix
+            console.log(`🔍 [CustomFieldsService] FormFieldName: "${formFieldName}"`)
             contactFieldIds[formFieldName] = field.id
+          } else {
+            console.log(`⚠️ [CustomFieldsService] Campo não encontrado para key: "${key}"`)
           }
         }
       })
+
+      console.log('🔍 [CustomFieldsService] opportunityFieldIds final:', opportunityFieldIds)
+      console.log('🔍 [CustomFieldsService] contactFieldIds final:', contactFieldIds)
 
       return {
         opportunityFields: opportunityFieldIds,
