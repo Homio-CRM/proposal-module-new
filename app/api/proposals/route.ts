@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
 			resolvedUnitId = unitRow.id as string
 		}
 
-		const upsertContact = async (c?: { homioId?: string; name: string } | null) => {
+		const updateContact = async (c?: { homioId?: string; name: string } | null) => {
 			if (!c || !c.name) return null as string | null
-			console.log('[api/proposals] Upserting contact:', { homioId: c.homioId, name: c.name })
+			console.log('[api/proposals] Updating contact:', { homioId: c.homioId, name: c.name })
 			
 			// Se não temos homioId, buscar por nome para evitar duplicatas
 			const searchKey = c.homioId || c.name
@@ -119,14 +119,14 @@ export async function POST(req: NextRequest) {
 				.single()
 			if (insertErr || !inserted) {
 				console.log('[api/proposals] Contact insert error:', insertErr)
-				throw insertErr || new Error('Failed to upsert contact')
+				throw insertErr || new Error('Failed to update contact')
 			}
 			console.log('[api/proposals] Contact inserted:', inserted.id)
 			return inserted.id as string
 		}
 
-		const primaryContactId = await upsertContact(primaryContact)
-		const secondaryContactId = await upsertContact(secondaryContact ?? null)
+		const primaryContactId = await updateContact(primaryContact)
+		const secondaryContactId = await updateContact(secondaryContact ?? null)
 
 		console.log('[api/proposals] Inserting proposal')
 		const { data: proposal, error: proposalErr } = await supabaseAdmin

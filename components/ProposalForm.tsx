@@ -669,38 +669,103 @@ export default function ProposalForm() {
 
     setValidationErrors({})
 
-    const payload = {
-      agencyId: userData.activeLocation,
-      opportunityId: formData.proposal.opportunityId,
-      proposalDate: formData.proposal.proposalDate,
-      proposalName: formData.proposal.proposalName || '',
-      responsible: formData.proposal.responsible,
-      reservedUntil: formData.property.reservedUntil,
-      unit: {
-        number: formData.property.unit,
-        tower: formData.property.tower,
-        floor: formData.property.floor
-      },
-      unitId: formData.property.unitId,
-      primaryContact: {
-        homioId: formData.primaryContact.homioId,
-        name: formData.primaryContact.name
-      },
-      secondaryContact: formData.additionalContact && formData.additionalContact.name ? {
-        homioId: formData.additionalContact.homioId,
-        name: formData.additionalContact.name
-      } : null,
-      installments: (formData.installments || []).map(i => ({
-        type: i.condition,
-        amountPerInstallment: i.value,
-        installmentsCount: i.quantity,
-        totalAmount: i.value * i.quantity,
-        startDate: i.date
-      }))
-    }
-
     try {
-      console.log('[ProposalForm] Submitting payload:', payload)
+      // Preparar dados dos contatos para update
+      const prepareContactData = (contact: ContactData & { customFields?: Array<{ id: string; value?: string; fieldValueString?: string; fieldValueLabel?: string; fieldValueFormatted?: string }> }) => {
+        const customFields = contact.customFields ? contact.customFields.map((field) => ({
+          id: field.id,
+          field_value: field.value || field.fieldValueString || field.fieldValueLabel || field.fieldValueFormatted || ''
+        })) : []
+
+        return {
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          dateOfBirth: contact.birthDate,
+          customFields
+        }
+      }
+
+      // Atualizar contato principal
+      const primaryContactData = prepareContactData(formData.primaryContact)
+      console.log('[ProposalForm] Updating primary contact:', primaryContactData)
+      
+      const primaryContactRes = await fetch('/api/operations/contact/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locationId: userData.activeLocation,
+          contactId: formData.primaryContact.homioId || 'new-contact',
+          ...primaryContactData
+        })
+      })
+
+      if (!primaryContactRes.ok) {
+        const errorData = await primaryContactRes.json().catch(() => null)
+        console.error('[ProposalForm] Primary contact update failed:', errorData)
+        setServerError('Falha ao atualizar contato principal')
+        setServerDetails(errorData)
+        setShowErrorModal(true)
+        return
+      }
+
+      // Atualizar contato adicional se existir
+      if (formData.additionalContact && formData.additionalContact.name) {
+        const additionalContactData = prepareContactData(formData.additionalContact)
+        console.log('[ProposalForm] Updating additional contact:', additionalContactData)
+        
+        const additionalContactRes = await fetch('/api/operations/contact/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            locationId: userData.activeLocation,
+            contactId: formData.additionalContact.homioId || 'new-contact',
+            ...additionalContactData
+          })
+        })
+
+        if (!additionalContactRes.ok) {
+          const errorData = await additionalContactRes.json().catch(() => null)
+          console.error('[ProposalForm] Additional contact update failed:', errorData)
+          setServerError('Falha ao atualizar contato adicional')
+          setServerDetails(errorData)
+          setShowErrorModal(true)
+          return
+        }
+      }
+
+      // Preparar payload da proposta
+      const payload = {
+        agencyId: userData.activeLocation,
+        opportunityId: formData.proposal.opportunityId,
+        proposalDate: formData.proposal.proposalDate,
+        proposalName: formData.proposal.proposalName || '',
+        responsible: formData.proposal.responsible,
+        reservedUntil: formData.property.reservedUntil,
+        unit: {
+          number: formData.property.unit,
+          tower: formData.property.tower,
+          floor: formData.property.floor
+        },
+        unitId: formData.property.unitId,
+        primaryContact: {
+          homioId: formData.primaryContact.homioId,
+          name: formData.primaryContact.name
+        },
+        secondaryContact: formData.additionalContact && formData.additionalContact.name ? {
+          homioId: formData.additionalContact.homioId,
+          name: formData.additionalContact.name
+        } : null,
+        installments: (formData.installments || []).map(i => ({
+          type: i.condition,
+          amountPerInstallment: i.value,
+          installmentsCount: i.quantity,
+          totalAmount: i.value * i.quantity,
+          startDate: i.date
+        }))
+      }
+
+      console.log('[ProposalForm] Submitting proposal payload:', payload)
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
