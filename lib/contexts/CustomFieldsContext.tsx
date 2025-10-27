@@ -40,19 +40,8 @@ export function CustomFieldsProvider({ children }: CustomFieldsProviderProps) {
   const getCustomFieldId = (section: 'opportunityFields' | 'contactFields', field: string, configData?: CustomFieldIds): string | null => {
     const fieldIds = customFieldIds[section]
     
-    if (configData) {
-      const configValue = section === 'opportunityFields' 
-        ? configData.opportunityFields[field]
-        : configData.contactFields[field]
-      
-      if (configValue && configValue.trim()) {
-        // Busca pelo valor da config (ex: "responsavel" -> ID)
-        return fieldIds[configValue] || null
-      }
-    }
-    
-    // Se não tem configData ou configValue vazio, retorna null
-    return null
+    // Buscar diretamente pela chave do campo
+    return fieldIds[field] || null
   }
 
   const getFieldMapping = (section: 'opportunityFields' | 'contactFields', field: string): FieldMapping | null => {

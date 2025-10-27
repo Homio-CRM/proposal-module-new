@@ -74,8 +74,10 @@ class CustomFieldsService {
         'andar': 'andar',
         'torre': 'torre',
         'responsible': 'responsavel',
+        'opportunityresponsavel': 'responsavel',
         'observations': 'observacoes',
         'observacoes': 'observacoes',
+        'observaes': 'observacoes',
         'reserve_until': 'reserve_until',
         'reservar_at': 'reserve_until',
         'reserveUntil': 'reserve_until'
@@ -104,16 +106,41 @@ class CustomFieldsService {
           const keyWithoutPrefix = key.replace(/^opportunity_/, '')
           console.log(`🔍 [CustomFieldsService] Key sem prefixo: "${keyWithoutPrefix}"`)
           
-          // Procurar por fieldKey que corresponde a opportunity.[key]
-          const fieldKey = `opportunity.${keyWithoutPrefix}`
+          // Primeiro tentar com o fieldKey exato
+          let fieldKey = `opportunity.${keyWithoutPrefix}`
           console.log(`🔍 [CustomFieldsService] Buscando fieldKey: "${fieldKey}"`)
           
-          const field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+          let field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+          
+          // Se não encontrou, tentar variações comuns
+          if (!field) {
+            // Para reserve_until, tentar reservar_at
+            if (keyWithoutPrefix === 'reserve_until') {
+              fieldKey = 'opportunity.reservar_at'
+              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
+              field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+            }
+            // Para responsible, tentar opportunityresponsavel
+            if (keyWithoutPrefix === 'responsible') {
+              fieldKey = 'opportunity.opportunityresponsavel'
+              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
+              field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+            }
+            // Para observations, tentar observaes
+            if (keyWithoutPrefix === 'observations') {
+              fieldKey = 'opportunity.observaes'
+              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
+              field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
+            }
+          }
+          
           console.log(`🔍 [CustomFieldsService] Campo encontrado:`, field)
           
           if (field) {
-            const formFieldName = opportunityFieldMapping[keyWithoutPrefix] || keyWithoutPrefix
-            console.log(`🔍 [CustomFieldsService] FormFieldName: "${formFieldName}"`)
+            const formFieldName = opportunityFieldMapping[keyWithoutPrefix] || 
+              opportunityFieldMapping[field.fieldKey.replace('opportunity.', '')] || 
+              keyWithoutPrefix
+            console.log(`🔍 [CustomFieldsService] FormFieldName final: "${formFieldName}"`)
             opportunityFieldIds[formFieldName] = field.id
           } else {
             console.log(`⚠️ [CustomFieldsService] Campo não encontrado para key: "${key}"`)
@@ -149,6 +176,12 @@ class CustomFieldsService {
 
       console.log('🔍 [CustomFieldsService] opportunityFieldIds final:', opportunityFieldIds)
       console.log('🔍 [CustomFieldsService] contactFieldIds final:', contactFieldIds)
+      
+      // Log todas as opportunity fields disponíveis para debug
+      console.log('🔍 [CustomFieldsService] Campos opportunity disponíveis:')
+      opportunityFields.forEach(f => {
+        console.log(`  - fieldKey: ${f.fieldKey}, name: ${f.name}, id: ${f.id}`)
+      })
 
       return {
         opportunityFields: opportunityFieldIds,
