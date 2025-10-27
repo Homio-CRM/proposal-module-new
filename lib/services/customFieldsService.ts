@@ -86,15 +86,22 @@ class CustomFieldsService {
       const contactFieldMapping: Record<string, string> = {
         'cpf': 'cpf',
         'rg': 'rg',
+        'rg__orgao_emissor': 'orgaoEmissor',
         'orgaoEmissor': 'orgaoEmissor',
         'nacionalidade': 'nacionalidade',
+        'estado_civil': 'estadoCivil',
         'civil': 'estadoCivil',
         'profisso': 'profissao',
+        'profissao': 'profissao',
         'cep': 'cep',
         'endereco': 'endereco',
         'cidade': 'cidade',
         'bairro': 'bairro',
-        'estado': 'estado'
+        'estado': 'estado',
+        'unidade_do_empreendimento': 'unidade',
+        'pavimento': 'andar',
+        'torre': 'torre',
+        'empreendimento': 'empreendimento'
       }
 
       // Processar opportunity fields
