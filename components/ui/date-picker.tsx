@@ -59,8 +59,10 @@ const CustomDatePicker = forwardRef<HTMLButtonElement, DatePickerProps>(
             selected={value ?? undefined}
             onSelect={(d) => { 
               if (d) {
-                const adjusted = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
-                onChange(adjusted);
+                // Criar uma nova data com hora local para evitar problemas de timezone
+                const selectedDate = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+                selectedDate.setHours(0, 0, 0, 0)
+                onChange(selectedDate);
               } else {
                 onChange(null);
               }

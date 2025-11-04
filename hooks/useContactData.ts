@@ -1,5 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { dataService } from '@/lib/services/dataService'
+import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
+
+interface ContactData {
+  name: string
+  cpf: string
+  rg: string
+  rgIssuer: string
+  nationality: string
+  maritalStatus: string
+  birthDate: string
+  email: string
+  phone: string
+  address: string
+  zipCode: string
+  city: string
+  neighborhood: string
+  state: string
+  profession?: string
+  homioId?: string
+}
+
+const contactCache = new Map<string, { data: ContactData; timestamp: number }>()
+const CACHE_DURATION = 5 * 60 * 1000
+const loadingPromises = new Map<string, Promise<ContactData>>()
+
+export function clearContactCache(contactId?: string | null, locationId?: string | null): void {
+  if (contactId && locationId) {
+    const cacheKey = `${contactId}:${locationId}`
+    contactCache.delete(cacheKey)
+    loadingPromises.delete(cacheKey)
+  } else {
+    contactCache.clear()
+    loadingPromises.clear()
+  }
+}
 
 function normalizeMaritalStatus(value: unknown): string {
   if (!value) return ''
@@ -49,35 +84,27 @@ function extractCustomFieldString(field: Record<string, unknown>): string | null
   return str
 }
 
-interface ContactData {
-  name: string
-  cpf: string
-  rg: string
-  rgIssuer: string
-  nationality: string
-  maritalStatus: string
-  birthDate: string
-  email: string
-  phone: string
-  address: string
-  zipCode: string
-  city: string
-  neighborhood: string
-  state: string
-  profession?: string
-  homioId?: string
-}
-
 interface UseContactDataResult {
   contactData: ContactData | null
   loading: boolean
   error: string | null
 }
 
-export function useContactData(contactId: string | null, locationId: string | null): UseContactDataResult {
+export function useContactData(
+  contactId: string | null, 
+  locationId: string | null,
+  forceRefresh?: boolean
+): UseContactDataResult {
   const [contactData, setContactData] = useState<ContactData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { customFieldIds } = useCustomFieldsContext()
+  const abortControllerRef = useRef<AbortController | null>(null)
+  
+  const contactFieldsKeys = useMemo(() => 
+    JSON.stringify(Object.keys(customFieldIds.contactFields).sort()), 
+    [customFieldIds.contactFields]
+  )
 
   useEffect(() => {
     if (!contactId || !locationId) {
@@ -87,7 +114,43 @@ export function useContactData(contactId: string | null, locationId: string | nu
       return
     }
 
-    const loadContactData = async () => {
+    const cacheKey = `${contactId}:${locationId}`
+    
+    if (forceRefresh) {
+      contactCache.delete(cacheKey)
+      loadingPromises.delete(cacheKey)
+    }
+    
+    const cached = contactCache.get(cacheKey)
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION && !forceRefresh) {
+      setContactData(cached.data)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    if (loadingPromises.has(cacheKey)) {
+      setLoading(true)
+      loadingPromises.get(cacheKey)!.then(data => {
+        setContactData(data)
+        setLoading(false)
+        setError(null)
+      }).catch(err => {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return
+        }
+        setError(err instanceof Error ? err.message : 'Erro desconhecido')
+        setContactData(null)
+        setLoading(false)
+      })
+      return
+    }
+
+    const loadContactData = async (): Promise<ContactData> => {
+      abortControllerRef.current = new AbortController()
+      const signal = abortControllerRef.current.signal
+
       try {
         setLoading(true)
         setError(null)
@@ -95,7 +158,8 @@ export function useContactData(contactId: string | null, locationId: string | nu
         const response = await fetch('/api/operations/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contactId, locationId })
+          body: JSON.stringify({ contactId, locationId }),
+          signal
         })
         
         if (!response.ok) {
@@ -106,8 +170,7 @@ export function useContactData(contactId: string | null, locationId: string | nu
         const contact = data?.contact ?? data
         
         if (!contact) {
-          setContactData(null)
-          return
+          throw new Error('Contato não encontrado')
         }
 
         const toTitleCase = (s: string) => s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -137,22 +200,14 @@ export function useContactData(contactId: string | null, locationId: string | nu
           }
         }
 
-        // Buscar configuração da agência para obter mapeamento de custom fields
-        const agencyConfig = await dataService.fetchAgencyConfig(locationId)
-        let contactFieldMappings: { contactFields: Array<{ formField: string; customFieldId: string; customFieldName: string }> } = { contactFields: [] }
-        
-        if (agencyConfig) {
-          const customFieldIds = await dataService.fetchCustomFieldIdsForConfig(locationId, agencyConfig)
-          contactFieldMappings = {
-            contactFields: Object.entries(customFieldIds.contactFields).map(([field, customFieldId]) => ({
-              formField: field,
-              customFieldId: customFieldId,
-              customFieldName: field
-            }))
-          }
+        const contactFieldMappings: { contactFields: Array<{ formField: string; customFieldId: string; customFieldName: string }> } = {
+          contactFields: Object.entries(customFieldIds.contactFields).map(([field, customFieldId]) => ({
+            formField: field,
+            customFieldId: customFieldId,
+            customFieldName: field
+          }))
         }
 
-        // Processar custom fields do contato
         if (contact.customFields && Array.isArray(contact.customFields)) {
           const contactCustomFields: Record<string, string> = {}
           contact.customFields.forEach((field: Record<string, unknown>) => {
@@ -164,7 +219,6 @@ export function useContactData(contactId: string | null, locationId: string | nu
             }
           })
 
-          // Mapear campos customizados usando o mapeamento da agência
           contactFieldMappings.contactFields.forEach(mapping => {
             const customFieldValue = contactCustomFields[mapping.customFieldId]
             if (customFieldValue !== undefined && customFieldValue !== null) {
@@ -210,17 +264,33 @@ export function useContactData(contactId: string | null, locationId: string | nu
           })
         }
 
+        contactCache.set(cacheKey, { data: processedContact, timestamp: Date.now() })
+        loadingPromises.delete(cacheKey)
         setContactData(processedContact)
+        return processedContact
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro desconhecido')
+        loadingPromises.delete(cacheKey)
+        if (err instanceof Error && err.name === 'AbortError') {
+          throw err
+        }
+        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
+        setError(errorMessage)
         setContactData(null)
+        throw err
       } finally {
         setLoading(false)
       }
     }
 
-    loadContactData()
-  }, [contactId, locationId])
+    const promise = loadContactData()
+    loadingPromises.set(cacheKey, promise)
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [contactId, locationId, contactFieldsKeys, forceRefresh])
 
   return { contactData, loading, error }
 }

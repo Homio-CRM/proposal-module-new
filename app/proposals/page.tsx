@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import Link from "next/link";
 
 export default function ProposalsPage() {
   const { userData, loading, error } = useUserDataContext();
+  const pathname = usePathname();
   const [filters, setFilters] = useState<ProposalFilters>({
     search: '',
     development: '',
@@ -62,10 +64,25 @@ export default function ProposalsPage() {
     }
   }, [userData, loading, loadProposals]);
 
+  const prevPathnameRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    if (pathname === '/proposals' && userData?.companyId && !loading) {
+      const prevPathname = prevPathnameRef.current;
+      
+      if (prevPathname !== pathname && prevPathname !== null) {
+        dataService.clearProposalsCache(userData.companyId);
+        loadProposals();
+      }
+      
+      prevPathnameRef.current = pathname;
+    }
+  }, [pathname, userData?.companyId, loading, loadProposals]);
+
   useEffect(() => {
     const handleFocus = () => {
-      // Recarregar propostas quando a página recebe foco (usuário volta de outra página)
       if (userData?.companyId && !loading) {
+        dataService.clearProposalsCache(userData.companyId);
         loadProposals();
       }
     };
@@ -75,7 +92,7 @@ export default function ProposalsPage() {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [userData, loading, loadProposals]);
+  }, [userData?.companyId, loading, loadProposals]);
 
   const filteredProposals = useMemo(() => {
     return proposals

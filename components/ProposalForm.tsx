@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { dataService } from '@/lib/services/dataService'
+import { useContactData } from '@/hooks/useContactData'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
@@ -80,7 +81,12 @@ const STEP_ICONS = {
   6: CheckCircle
 }
 
-export default function ProposalForm() {
+interface ProposalFormProps {
+  initialData?: ProposalFormData
+  proposalId?: string
+}
+
+export default function ProposalForm({ initialData, proposalId }: ProposalFormProps) {
   const { userData, loading } = useUserDataContext()
   const { customFieldIds } = useCustomFieldsContext()
   const router = useRouter()
@@ -117,12 +123,14 @@ export default function ProposalForm() {
     reservedUntil: '',
     observations: ''
   }
-  const [formData, setFormData] = useState<ProposalFormData>({
-    proposal: initialProposal,
-    primaryContact: initialPrimaryContact,
-    property: initialProperty,
-    installments: []
-  })
+  const [formData, setFormData] = useState<ProposalFormData>(
+    initialData || {
+      proposal: initialProposal,
+      primaryContact: initialPrimaryContact,
+      property: initialProperty,
+      installments: []
+    }
+  )
 
   // Funções de validação
   const validateEmail = (email: string): boolean => {
@@ -532,6 +540,62 @@ export default function ProposalForm() {
     }
   }, [userData])
 
+  const needsPrimaryContactFetch = useMemo(() => {
+    return !!(initialData?.primaryContact.homioId && 
+      (!initialData.primaryContact.cpf || !initialData.primaryContact.email || !initialData.primaryContact.phone))
+  }, [initialData?.primaryContact.homioId, initialData?.primaryContact.cpf, initialData?.primaryContact.email, initialData?.primaryContact.phone])
+  
+  const needsAdditionalContactFetch = useMemo(() => {
+    return !!(initialData?.additionalContact?.homioId && 
+      (!initialData.additionalContact.cpf || !initialData.additionalContact.email || !initialData.additionalContact.phone))
+  }, [initialData?.additionalContact?.homioId, initialData?.additionalContact?.cpf, initialData?.additionalContact?.email, initialData?.additionalContact?.phone])
+
+  const primaryContactFromCache = useContactData(
+    initialData?.primaryContact.homioId || null,
+    userData?.activeLocation || null,
+    needsPrimaryContactFetch
+  )
+
+  const additionalContactFromCache = useContactData(
+    initialData?.additionalContact?.homioId || null,
+    userData?.activeLocation || null,
+    needsAdditionalContactFetch
+  )
+
+  useEffect(() => {
+    if (initialData) {
+      const updatedData = { ...initialData }
+
+      if (primaryContactFromCache.contactData && initialData.primaryContact.homioId) {
+        const hasEmptyFields = !initialData.primaryContact.cpf || 
+          !initialData.primaryContact.email || 
+          !initialData.primaryContact.phone
+        
+        if (hasEmptyFields) {
+          updatedData.primaryContact = {
+            ...primaryContactFromCache.contactData,
+            homioId: initialData.primaryContact.homioId
+          }
+        }
+      }
+
+      if (additionalContactFromCache.contactData && initialData.additionalContact?.homioId) {
+        const hasEmptyFields = !initialData.additionalContact.cpf || 
+          !initialData.additionalContact.email || 
+          !initialData.additionalContact.phone
+        
+        if (hasEmptyFields) {
+          updatedData.additionalContact = {
+            ...additionalContactFromCache.contactData,
+            homioId: initialData.additionalContact.homioId
+          }
+        }
+      }
+
+      setFormData(updatedData)
+    }
+  }, [initialData, primaryContactFromCache.contactData, additionalContactFromCache.contactData])
+
 
 
 
@@ -805,8 +869,11 @@ export default function ProposalForm() {
       }
 
       console.log('[ProposalForm] Submitting proposal payload:', payload)
-      const res = await fetch('/api/proposals', {
-        method: 'POST',
+      const url = proposalId ? `/api/proposals/${proposalId}` : '/api/proposals'
+      const method = proposalId ? 'PUT' : 'POST'
+      
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
@@ -816,6 +883,9 @@ export default function ProposalForm() {
         setServerDetails((data as Record<string, unknown>) ?? null)
         setShowErrorModal(true)
         return
+      }
+      if (userData?.companyId) {
+        dataService.clearProposalsCache(userData.companyId)
       }
       setShowSuccessModal(true)
     } catch {
@@ -930,18 +1000,26 @@ export default function ProposalForm() {
             <Dialog open={showSuccessModal} onOpenChange={(open) => {
               if (!open) {
                 setShowSuccessModal(false)
-                router.push('/proposals')
+                if (proposalId) {
+                  router.push(`/proposals/${proposalId}`)
+                } else {
+                  router.push('/proposals')
+                }
               }
             }}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Proposta criada</DialogTitle>
-                  <DialogDescription>A proposta foi salva com sucesso.</DialogDescription>
+                  <DialogTitle>{proposalId ? 'Proposta atualizada' : 'Proposta criada'}</DialogTitle>
+                  <DialogDescription>{proposalId ? 'A proposta foi atualizada com sucesso.' : 'A proposta foi salva com sucesso.'}</DialogDescription>
                 </DialogHeader>
                 <div className="flex justify-end gap-2">
                   <Button onClick={() => {
                     setShowSuccessModal(false)
-                    router.push('/proposals')
+                    if (proposalId) {
+                      router.push(`/proposals/${proposalId}`)
+                    } else {
+                      router.push('/proposals')
+                    }
                   }}>OK</Button>
                 </div>
               </DialogContent>

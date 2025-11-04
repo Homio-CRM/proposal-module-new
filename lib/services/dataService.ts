@@ -186,6 +186,10 @@ class DataService {
       case 'rejected':
       case 'denied':
         return 'negada'
+      case 'em_analise':
+      case 'under_review':
+      case 'pending':
+        return 'em_analise'
       default:
         return 'em_analise'
     }

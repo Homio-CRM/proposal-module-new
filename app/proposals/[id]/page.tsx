@@ -6,9 +6,11 @@ import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
 import { ProposalSkeleton } from '@/components/skeletons/ProposalSkeleton'
 import { ProposalDetails } from '@/components/ProposalDetails'
+import { ProposalStatusChanger } from '@/components/ProposalStatusChanger'
 import { dataService } from '@/lib/services/dataService'
-import { ProposalFormData, ProposalListItem } from '@/lib/types/proposal'
-import { ArrowLeft, AlertCircle } from 'lucide-react'
+import { ProposalFormData, ProposalListItem, ProposalStatus } from '@/lib/types/proposal'
+import { clearContactCache } from '@/hooks/useContactData'
+import { ArrowLeft, AlertCircle, Edit } from 'lucide-react'
 
 export default function ProposalDetailPage() {
   const params = useParams()
@@ -20,6 +22,73 @@ export default function ProposalDetailPage() {
   const [proposalDetails, setProposalDetails] = useState<ProposalFormData | null>(null)
   const [proposalLoading, setProposalLoading] = useState(true)
   const [proposalError, setProposalError] = useState<string | null>(null)
+  
+  const handleStatusChange = async (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => {
+    try {
+      const response = await fetch(`/api/proposals/${proposalId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: newStatus,
+          updateUnitStatus: updateUnitStatus === true,
+          reservedUntil: reservedUntil || null
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao atualizar status' }))
+        console.error('[handleStatusChange] Erro detalhado:', errorData)
+        const errorMessage = errorData.error || errorData.supabase?.message || 'Erro ao atualizar status'
+        throw new Error(errorMessage)
+      }
+
+      const responseData = await response.json().catch(() => null)
+      
+      if (userData?.companyId) {
+        dataService.clearProposalsCache(userData.companyId)
+      }
+
+      setProposal(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          status: responseData?.status || newStatus
+        }
+      })
+
+      setProposalDetails(prev => {
+        if (!prev) return prev
+        const updatedProperty = { ...prev.property }
+        
+        if (reservedUntil !== undefined) {
+          updatedProperty.reservedUntil = reservedUntil || ''
+        }
+        
+        // Atualizar o status da unidade quando updateUnitStatus é true
+        if (updateUnitStatus) {
+          if (newStatus === 'aprovada') {
+            updatedProperty.unitStatus = 'sold'
+          } else if (newStatus === 'negada') {
+            updatedProperty.unitStatus = 'available'
+          } else if (newStatus === 'em_analise' && reservedUntil) {
+            updatedProperty.unitStatus = 'reserved'
+          }
+        }
+        
+        return {
+          ...prev,
+          proposal: {
+            ...prev.proposal,
+            proposalStatus: responseData?.status || newStatus
+          },
+          property: updatedProperty
+        }
+      })
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error)
+      throw error
+    }
+  }
 
   useEffect(() => {
     const loadProposalData = async () => {
@@ -45,6 +114,14 @@ export default function ProposalDetailPage() {
         if (!details) {
           setProposalError('Detalhes da proposta não encontrados')
           return
+        }
+
+        // Limpar cache dos contatos para forçar busca atualizada
+        if (details.primaryContact.homioId) {
+          clearContactCache(details.primaryContact.homioId, userData.activeLocation)
+        }
+        if (details.additionalContact?.homioId) {
+          clearContactCache(details.additionalContact.homioId, userData.activeLocation)
         }
 
         setProposalDetails(details)
@@ -161,7 +238,23 @@ export default function ProposalDetailPage() {
                 </p>
               </div>
             </div>
+            <Button
+              variant="default"
+              onClick={() => router.push(`/proposals/${proposalId}/edit`)}
+              className="flex items-center gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Editar Proposta
+            </Button>
           </div>
+
+          {/* Status Changer */}
+          <ProposalStatusChanger
+            proposalId={proposalId}
+            currentStatus={proposal.status}
+            unitId={proposalDetails.property.unitId}
+            onStatusChange={handleStatusChange}
+          />
 
           {/* Proposal Details */}
           <ProposalDetails data={proposalDetails} locationId={userData.activeLocation} />

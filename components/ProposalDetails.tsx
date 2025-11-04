@@ -1,10 +1,10 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ContactCard } from '@/components/ContactCard'
 import { ProposalFormData, PaymentCondition } from '@/lib/types/proposal'
-import { getStatusBadgeVariant, getStatusLabel } from '@/lib/utils/proposalStatus'
 import { 
   FileText, 
   Building, 
@@ -18,11 +18,23 @@ interface ProposalDetailsProps {
 }
 
 export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
+  const router = useRouter()
+
   const formatDate = (dateString: string) => {
     if (!dateString || dateString.trim() === '') {
       return '—'
     }
     try {
+      // Se a string está no formato YYYY-MM-DD, parse como data local
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const [year, month, day] = dateString.split('-').map(Number)
+        const date = new Date(year, month - 1, day)
+        if (isNaN(date.getTime())) {
+          return '—'
+        }
+        return date.toLocaleDateString('pt-BR')
+      }
+      // Caso contrário, usar o comportamento padrão
       const date = new Date(dateString)
       if (isNaN(date.getTime())) {
         return '—'
@@ -118,6 +130,12 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
     }
   }
 
+  const handlePropertyClick = () => {
+    if (data.property.buildingId && data.property.unitId) {
+      router.push(`/buildings/${data.property.buildingId}/${data.property.unitId}`)
+    }
+  }
+
 
 
   return (
@@ -152,14 +170,6 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
               <p className="text-sm text-gray-900">{formatDate(data.proposal.proposalDate)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Status</label>
-              <div className="mt-1">
-                <Badge variant={getStatusBadgeVariant(data.proposal.proposalStatus)}>
-                  {getStatusLabel(data.proposal.proposalStatus)}
-                </Badge>
-              </div>
-            </div>
-            <div>
               <label className="text-sm font-medium text-gray-700">Responsável</label>
               <p className="text-sm text-gray-900">{formatField(data.proposal.responsible)}</p>
             </div>
@@ -183,6 +193,7 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
           ...data.primaryContact,
           homioId: data.primaryContact.homioId || ''
         }}
+        forceRefresh={true}
       />
 
       {/* Contato Adicional */}
@@ -196,6 +207,7 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
             ...data.additionalContact,
             homioId: data.additionalContact.homioId || ''
           }}
+          forceRefresh={true}
         />
       )}
 
@@ -203,8 +215,19 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-primary-600" />
-            Dados do Imóvel
+            <button
+              onClick={handlePropertyClick}
+              className={`flex items-center gap-2 transition-colors ${
+                data.property.buildingId && data.property.unitId
+                  ? 'hover:text-primary-700 cursor-pointer' 
+                  : 'cursor-default opacity-50'
+              }`}
+              disabled={!data.property.buildingId || !data.property.unitId}
+              title={data.property.buildingId && data.property.unitId ? 'Ver detalhes da unidade' : 'ID do imóvel não disponível'}
+            >
+              <Building className="h-5 w-5 text-primary-600" />
+              Dados do Imóvel
+            </button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

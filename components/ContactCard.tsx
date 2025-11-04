@@ -10,10 +10,11 @@ interface ContactCardProps {
   contactId: string | null
   locationId: string
   fallbackData: ContactData
+  forceRefresh?: boolean
 }
 
-export function ContactCard({ title, icon, contactId, locationId, fallbackData }: ContactCardProps) {
-  const { contactData, loading, error } = useContactData(contactId, locationId)
+export function ContactCard({ title, icon, contactId, locationId, fallbackData, forceRefresh }: ContactCardProps) {
+  const { contactData, loading, error } = useContactData(contactId, locationId, forceRefresh)
   
   const formatDate = (dateString: string) => {
     if (!dateString || dateString.trim() === '') {
