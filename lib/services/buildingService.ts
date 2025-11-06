@@ -2,6 +2,7 @@ import { getSupabase } from '@/lib/supabaseClient'
 import { Building, Unit, BuildingWithUnits, BuildingListItem, UnitStatus, UnitStatusDB } from '@/lib/types/building'
 import { userCache, CACHE_KEYS } from '@/lib/cache/userCache'
 import { dataService } from './dataService'
+import { sendUnitStatusWebhook } from '@/lib/utils/unitWebhook'
 
 export function mapStatusFromDB(status: UnitStatusDB): UnitStatus {
   const statusMap: Record<UnitStatusDB, UnitStatus> = {
@@ -266,6 +267,19 @@ class BuildingService {
         agency_id: data.agency_id,
         created_at: data.created_at,
         updated_at: data.updated_at
+      }
+
+      const webhookResult = await sendUnitStatusWebhook(
+        updatedUnit.id,
+        updatedUnit.name,
+        updatedUnit.status
+      )
+
+      if (!webhookResult.success) {
+        const error = new Error('WEBHOOK_ERROR') as Error & { webhookError: boolean; webhookMessage?: string }
+        error.webhookError = true
+        error.webhookMessage = webhookResult.message
+        throw error
       }
 
       userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${data.building_id}_${data.agency_id}`)

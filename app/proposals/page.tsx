@@ -19,10 +19,12 @@ export default function ProposalsPage() {
     search: '',
     development: '',
     unit: '',
-    status: 'all'
+    status: 'all',
+    createdBy: 'all'
   });
   const [selectedProposals, setSelectedProposals] = useState<string[]>([]);
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
+  const [profiles, setProfiles] = useState<Array<{ id: string; name: string | null }>>([]);
   const [proposalsLoading, setProposalsLoading] = useState(true);
   const developmentOptions = useMemo(() => {
     const set = new Set<string>([''])
@@ -49,8 +51,12 @@ export default function ProposalsPage() {
     
     try {
       setProposalsLoading(true);
-      const proposalsData = await dataService.fetchProposalsData(userData.companyId);
+      const [proposalsData, profilesData] = await Promise.all([
+        dataService.fetchProposalsData(userData.companyId),
+        dataService.fetchProfilesWithProposals(userData.companyId)
+      ]);
       setProposals(proposalsData);
+      setProfiles(profilesData);
     } catch (error) {
       console.error('Erro ao carregar propostas:', error);
     } finally {
@@ -110,7 +116,10 @@ export default function ProposalsPage() {
         const matchesStatus = filters.status === 'all' || 
           proposal.status === filters.status;
 
-        return matchesSearch && matchesDevelopment && matchesUnit && matchesStatus;
+        const matchesCreatedBy = filters.createdBy === 'all' || 
+          (Array.isArray(filters.createdBy) && filters.createdBy.length > 0 && proposal.createdBy && filters.createdBy.includes(proposal.createdBy));
+
+        return matchesSearch && matchesDevelopment && matchesUnit && matchesStatus && matchesCreatedBy;
       })
       .sort((a, b) => {
         // Ordenar por data da proposta (mais recente primeiro)
@@ -127,7 +136,8 @@ export default function ProposalsPage() {
       search: '',
       development: '',
       unit: '',
-      status: 'all'
+      status: 'all',
+      createdBy: 'all'
     });
   };
 
@@ -295,6 +305,7 @@ export default function ProposalsPage() {
           onClearFilters={handleClearFilters}
           developmentOptions={developmentOptions}
           unitOptions={unitOptions}
+          profiles={profiles}
         />
 
         <div className="flex-1 p-6 overflow-visible min-w-0">

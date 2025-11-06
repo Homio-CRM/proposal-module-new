@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
                 agency_id: userData.activeLocation,
                 homio_user_id: userData.userId,
                 email: userData.email,
-                role: userData.role
+                role: userData.role,
+                name: userData.userName
             })
 
             const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -108,7 +109,8 @@ export async function POST(req: NextRequest) {
             agency_id: userData.activeLocation,
             homio_user_id: userData.userId,
             email: userData.email,
-            role: userData.role
+            role: userData.role,
+            name: userData.userName
         })
 
         const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({

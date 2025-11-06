@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const anonKey = process.env.SUPABASE_ANON_KEY || ''
 
 const supabaseAdmin = createClient(
 	supabaseUrl,
@@ -20,6 +21,19 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
 	try {
+		const authHeader = req.headers.get('authorization')
+		let createdBy: string | null = null
+
+		if (authHeader && anonKey) {
+			const token = authHeader.replace('Bearer ', '')
+			const supabaseClient = createClient(supabaseUrl, anonKey)
+			const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+			
+			if (!userError && user) {
+				createdBy = user.id
+			}
+		}
+
 		const body = await req.json()
 		const {
 			agencyId,
@@ -28,6 +42,7 @@ export async function POST(req: NextRequest) {
 			proposalName,
 			responsible,
 			reservedUntil,
+			shouldReserveUnit,
 			unit,
 			unitId,
 			primaryContact,
@@ -40,6 +55,7 @@ export async function POST(req: NextRequest) {
 			proposalName?: string
 			responsible: string
 			reservedUntil?: string
+			shouldReserveUnit?: boolean
 			unit?: { number: string; tower: string; floor: string; buildingName?: string }
 			unitId?: string
 			primaryContact: { homioId?: string; name: string }
@@ -133,7 +149,8 @@ export async function POST(req: NextRequest) {
 				responsible,
 				name: proposalName ?? '',
 				agency_id: agencyId,
-				reserved_until: reservedUntil || null
+				reserved_until: reservedUntil || null,
+				created_by: createdBy
 			})
 			.select('id')
 			.single()
@@ -175,9 +192,9 @@ export async function POST(req: NextRequest) {
     }
 		}
 
-		// Reservar unidade se reservedUntil estiver preenchido
-		if (reservedUntil && resolvedUnitId) {
-			const { error: unitUpdateErr } = await supabaseAdmin
+		// Reservar unidade se shouldReserveUnit for true e reservedUntil estiver preenchido
+		if (shouldReserveUnit !== false && reservedUntil && resolvedUnitId) {
+			await supabaseAdmin
 				.from('units')
 				.update({ 
 					status: 'reserved',
@@ -185,7 +202,6 @@ export async function POST(req: NextRequest) {
 				})
 				.eq('id', resolvedUnitId)
 				.eq('agency_id', agencyId)
-
 		}
 		return NextResponse.json({ id: proposal.id })
 	} catch (error) {

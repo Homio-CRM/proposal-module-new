@@ -24,6 +24,7 @@ export async function PUT(
 			proposalName,
 			responsible,
 			reservedUntil,
+			shouldReserveUnit,
 			unitId,
 			primaryContact,
 			secondaryContact,
@@ -34,6 +35,7 @@ export async function PUT(
 			proposalName?: string
 			responsible: string
 			reservedUntil?: string
+			shouldReserveUnit?: boolean
 			unitId?: string
 			primaryContact: { homioId?: string; name: string }
 			secondaryContact?: { homioId?: string; name: string } | null
@@ -181,7 +183,7 @@ export async function PUT(
 			}
 		}
 
-		if (reservedUntil && unitId) {
+		if (shouldReserveUnit !== false && reservedUntil && unitId) {
 			await supabaseAdmin
 				.from('units')
 				.update({ 

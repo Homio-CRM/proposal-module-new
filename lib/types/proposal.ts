@@ -42,6 +42,7 @@ export interface PropertyData {
   unitId?: string
   buildingId?: string
   unitStatus?: string
+  shouldReserveUnit?: boolean
 }
 
 export type PaymentCondition =
@@ -91,6 +92,7 @@ export interface ProposalListItem {
   proposalDate: string
   price?: number
   assignedAgent?: string
+  createdBy?: string
 }
 
 export interface ProposalFilters {
@@ -98,4 +100,5 @@ export interface ProposalFilters {
   development: string
   unit: string
   status: ProposalStatus | 'all'
+  createdBy: string[] | 'all'
 }

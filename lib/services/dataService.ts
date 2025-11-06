@@ -38,11 +38,19 @@ export interface ProposalMatchData {
   opportunity_id: string
   status: string
   agency_id: string
+  created_by?: string | null
   unit_name: string
   building_name: string
   primary_contact_name: string
   proposal_date: string
   total_installments_amount: number
+}
+
+export interface ProfileWithProposals {
+  id: string
+  name: string | null
+  role: string | null
+  agency_id: string
 }
 
 class DataService {
@@ -133,7 +141,8 @@ class DataService {
         status: this.mapProposalStatus(item.status),
         proposalDate: item.proposal_date,
         price: item.total_installments_amount || 0,
-        assignedAgent: 'Sistema'
+        assignedAgent: 'Sistema',
+        createdBy: item.created_by || undefined
       }))
 
       userCache.set(cacheKey, proposals, 5 * 60 * 1000)
@@ -195,18 +204,19 @@ class DataService {
     }
   }
 
-  async fetchProposalDetails(proposalId: string): Promise<ProposalFormData | null> {
+  async fetchProposalDetails(proposalId: string): Promise<{ proposalFormData: ProposalFormData; createdByName: string | null } | null> {
     try {
       const supabase = await getSupabase()
       
-      // Buscar proposta com contatos e unidade
+      // Buscar proposta com contatos, unidade e profile criador
       const { data: proposalData, error: proposalError } = await supabase
         .from('proposals')
         .select(`
           *,
           primary_contact:contacts!proposals_primary_contact_id_fkey(*),
           secondary_contact:contacts!proposals_secondary_contact_id_fkey(*),
-          unit:units(*, building:buildings(*))
+          unit:units(*, building:buildings(*)),
+          created_by_profile:profiles!proposals_created_by_fkey(id, name)
         `)
         .eq('id', proposalId)
         .single()
@@ -270,7 +280,8 @@ class DataService {
           observations: proposalData.notes || '',
           unitId: proposalData.unit_id,
           buildingId: proposalData.unit?.building?.id,
-          unitStatus: proposalData.unit?.status || ''
+          unitStatus: proposalData.unit?.status || '',
+          shouldReserveUnit: !!proposalData.reserved_until
         },
         installments: (installmentsData || []).map((installment) => ({
           id: installment.id,
@@ -302,8 +313,9 @@ class DataService {
         }
       }
 
+      const createdByName = (proposalData as { created_by_profile?: { name?: string | null } | null })?.created_by_profile?.name || null
 
-      return proposalFormData
+      return { proposalFormData, createdByName }
     } catch (error) {
       console.error('Erro ao buscar detalhes da proposta:', error)
       return null
@@ -343,6 +355,41 @@ class DataService {
   clearAgencyConfigCache(locationId: string): void {
     const cacheKey = `${CACHE_KEYS.USER_PROFILE}_agency_config_${locationId}`
     userCache.delete(cacheKey)
+  }
+
+  async fetchProfilesWithProposals(agencyId: string): Promise<ProfileWithProposals[]> {
+    const cacheKey = `${CACHE_KEYS.USER_PROFILE}_profiles_with_proposals_${agencyId}`
+    
+    const cachedData = userCache.get<ProfileWithProposals[]>(cacheKey)
+    if (cachedData) {
+      return cachedData
+    }
+
+    try {
+      const supabase = await getSupabase()
+      
+      const { data, error } = await supabase
+        .from('profiles_proposals_match')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (error) {
+        throw new Error(`Erro ao buscar profiles: ${error.message}`)
+      }
+
+      const profiles: ProfileWithProposals[] = (data || []).map((item: ProfileWithProposals) => ({
+        id: item.id,
+        name: item.name,
+        role: item.role,
+        agency_id: item.agency_id
+      }))
+
+      userCache.set(cacheKey, profiles, 5 * 60 * 1000)
+      return profiles
+    } catch (error) {
+      console.error('Erro ao buscar profiles com propostas:', error)
+      return []
+    }
   }
 
   async deleteProposal(proposalId: string): Promise<void> {

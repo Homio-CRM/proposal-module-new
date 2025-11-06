@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ProposalSkeleton } from '@/components/skeletons/ProposalSkeleton'
 import { ProposalDetails } from '@/components/ProposalDetails'
 import { ProposalStatusChanger } from '@/components/ProposalStatusChanger'
@@ -20,8 +21,10 @@ export default function ProposalDetailPage() {
   const proposalId = params.id as string
   const [proposal, setProposal] = useState<ProposalListItem | null>(null)
   const [proposalDetails, setProposalDetails] = useState<ProposalFormData | null>(null)
+  const [createdByName, setCreatedByName] = useState<string | null>(null)
   const [proposalLoading, setProposalLoading] = useState(true)
   const [proposalError, setProposalError] = useState<string | null>(null)
+  const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
   
   const handleStatusChange = async (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => {
     try {
@@ -38,6 +41,12 @@ export default function ProposalDetailPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erro ao atualizar status' }))
         console.error('[handleStatusChange] Erro detalhado:', errorData)
+        
+        if (errorData.webhookError) {
+          setWebhookErrorDialogOpen(true)
+          return
+        }
+        
         const errorMessage = errorData.error || errorData.supabase?.message || 'Erro ao atualizar status'
         throw new Error(errorMessage)
       }
@@ -110,11 +119,13 @@ export default function ProposalDetailPage() {
         setProposal(foundProposal)
 
         // Buscar detalhes completos da proposta
-        const details = await dataService.fetchProposalDetails(proposalId)
-        if (!details) {
+        const result = await dataService.fetchProposalDetails(proposalId)
+        if (!result) {
           setProposalError('Detalhes da proposta não encontrados')
           return
         }
+
+        const { proposalFormData: details, createdByName } = result
 
         // Limpar cache dos contatos para forçar busca atualizada
         if (details.primaryContact.homioId) {
@@ -125,6 +136,7 @@ export default function ProposalDetailPage() {
         }
 
         setProposalDetails(details)
+        setCreatedByName(createdByName)
       } catch (error) {
         console.error('Erro ao carregar proposta:', error)
         setProposalError('Erro ao carregar proposta')
@@ -233,8 +245,8 @@ export default function ProposalDetailPage() {
                 <h1 className="text-2xl font-bold text-gray-900">
                   {proposal.title}
                 </h1>
-                <p className="text-gray-600">
-                  Criada em {new Date(proposal.proposalDate).toLocaleDateString('pt-BR')}
+                <p className="text-gray-400">
+                  {createdByName ? `Criada por ${createdByName}` : 'Criador não informado'}
                 </p>
               </div>
             </div>
@@ -260,6 +272,25 @@ export default function ProposalDetailPage() {
           <ProposalDetails data={proposalDetails} locationId={userData.activeLocation} />
         </div>
       </div>
+
+      <Dialog open={webhookErrorDialogOpen} onOpenChange={setWebhookErrorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Erro ao atualizar status
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Ocorreu um erro ao atualizar o status da unidade. Por favor, entre em contato com os desenvolvedores.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setWebhookErrorDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

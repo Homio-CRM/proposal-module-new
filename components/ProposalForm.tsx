@@ -6,6 +6,7 @@ import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { dataService } from '@/lib/services/dataService'
 import { useContactData } from '@/hooks/useContactData'
+import { getSupabase } from '@/lib/supabaseClient'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
@@ -121,7 +122,8 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
     floor: '',
     tower: '',
     reservedUntil: '',
-    observations: ''
+    observations: '',
+    shouldReserveUnit: true
   }
   const [formData, setFormData] = useState<ProposalFormData>(
     initialData || {
@@ -370,7 +372,7 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         if (!formData.property.tower?.trim()) {
           errors['property.tower'] = 'Torre é obrigatória'
         }
-        if (!formData.property.reservedUntil) {
+        if (formData.property.shouldReserveUnit !== false && !formData.property.reservedUntil) {
           errors['property.reservedUntil'] = 'Data de reserva é obrigatória'
         }
         break
@@ -488,7 +490,7 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
           property.unit.trim() &&
           (property.floor?.trim() || '') &&
           (property.tower?.trim() || '') &&
-          property.reservedUntil
+          (property.shouldReserveUnit === false || property.reservedUntil)
         )
       
       case 5: // Payment Installments
@@ -844,7 +846,8 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         proposalDate: formData.proposal.proposalDate,
         proposalName: formData.proposal.proposalName || '',
         responsible: formData.proposal.responsible,
-        reservedUntil: formData.property.reservedUntil,
+        reservedUntil: formData.property.shouldReserveUnit !== false ? formData.property.reservedUntil : undefined,
+        shouldReserveUnit: formData.property.shouldReserveUnit !== false,
         unit: {
           number: formData.property.unit,
           tower: formData.property.tower,
@@ -868,13 +871,20 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         }))
       }
 
-      console.log('[ProposalForm] Submitting proposal payload:', payload)
       const url = proposalId ? `/api/proposals/${proposalId}` : '/api/proposals'
       const method = proposalId ? 'PUT' : 'POST'
       
+      const supabaseClient = await getSupabase()
+      const { data: { session } } = await supabaseClient.auth.getSession()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       })
       const data = await res.json().catch(() => null)

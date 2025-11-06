@@ -28,13 +28,13 @@ export default function EditProposalPage() {
         setProposalLoading(true)
         setProposalError(null)
 
-        const details = await dataService.fetchProposalDetails(proposalId)
-        if (!details) {
+        const result = await dataService.fetchProposalDetails(proposalId)
+        if (!result) {
           setProposalError('Detalhes da proposta não encontrados')
           return
         }
 
-        setProposalDetails(details)
+        setProposalDetails(result.proposalFormData)
       } catch (error) {
         console.error('Erro ao carregar proposta:', error)
         setProposalError('Erro ao carregar proposta')

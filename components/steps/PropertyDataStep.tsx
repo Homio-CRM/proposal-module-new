@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { AlertTriangle } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface PropertyDataStepProps {
   data: PropertyData
@@ -127,7 +128,7 @@ export default function PropertyDataStep({
             }
           }
         }
-      } catch (error) {
+      } catch {
       }
     }
     loadData()
@@ -310,20 +311,43 @@ export default function PropertyDataStep({
         </div>
 
         <div>
-          <label htmlFor="reservedUntil" className="block text-sm font-medium text-neutral-700 mb-2">
-            Reservado Até
-          </label>
-          <CustomDatePicker
-            value={formData.reservedUntil ? new Date(formData.reservedUntil) : null}
-            onChange={(date) => handleInputChange('reservedUntil', date ? date.toISOString().split('T')[0] : '')}
-            placeholder="Selecione a data de reserva (opcional)"
-            minDate={new Date()}
-            error={!!errors['property.reservedUntil']}
-          />
-          {errors['property.reservedUntil'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['property.reservedUntil']}</p>
-          )}
+          <div className="flex items-center space-x-2 mb-2">
+            <Checkbox
+              id="shouldReserveUnit"
+              checked={formData.shouldReserveUnit !== false}
+              onCheckedChange={(checked) => {
+                const next = { 
+                  ...formData, 
+                  shouldReserveUnit: checked === true,
+                  reservedUntil: checked === false ? '' : formData.reservedUntil
+                }
+                setFormData(next)
+                onDataChange(next)
+              }}
+            />
+            <label htmlFor="shouldReserveUnit" className="text-sm font-medium text-neutral-700 cursor-pointer">
+              Reservar Imóvel
+            </label>
+          </div>
         </div>
+
+        {formData.shouldReserveUnit !== false && (
+          <div>
+            <label htmlFor="reservedUntil" className="block text-sm font-medium text-neutral-700 mb-2">
+              Reservado Até
+            </label>
+            <CustomDatePicker
+              value={formData.reservedUntil ? new Date(formData.reservedUntil) : null}
+              onChange={(date) => handleInputChange('reservedUntil', date ? date.toISOString().split('T')[0] : '')}
+              placeholder="Selecione a data de reserva"
+              minDate={new Date()}
+              error={!!errors['property.reservedUntil']}
+            />
+            {errors['property.reservedUntil'] && (
+              <p className="text-sm text-red-600 mt-1">{errors['property.reservedUntil']}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6">

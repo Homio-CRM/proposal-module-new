@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ProposalStatus } from '@/lib/types/proposal'
+import { sendUnitStatusWebhook } from '@/lib/utils/unitWebhook'
+import { mapStatusFromDB } from '@/lib/services/buildingService'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -119,7 +121,7 @@ export async function PATCH(
 					.update(updateData)
 					.eq('id', existingProposal.unit_id)
 					.eq('agency_id', existingProposal.agency_id)
-					.select('id, status')
+					.select('id, name, status')
 					.single()
 
 				if (unitUpdateError) {
@@ -143,6 +145,22 @@ export async function PATCH(
 
 				if (!updatedUnit) {
 					console.error('[PATCH /api/proposals/[id]/status] Unidade não encontrada após atualização')
+				} else {
+					const frontendStatus = mapStatusFromDB(updatedUnit.status as 'available' | 'reserved' | 'sold')
+					const webhookResult = await sendUnitStatusWebhook(
+						updatedUnit.id,
+						updatedUnit.name,
+						frontendStatus
+					)
+
+					if (!webhookResult.success) {
+						return NextResponse.json({
+							error: 'WEBHOOK_ERROR',
+							webhookError: true,
+							webhookMessage: webhookResult.message || 'Erro ao enviar webhook de atualização de status da unidade',
+							message: 'Ocorreu um erro ao atualizar o status da unidade. Por favor, entre em contato com os desenvolvedores.'
+						}, { status: 500 })
+					}
 				}
 			}
 		}

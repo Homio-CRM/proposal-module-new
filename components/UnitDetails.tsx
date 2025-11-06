@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Unit, Building, UnitStatus } from '@/lib/types/building'
 import { 
   Home, 
   Building2, 
   MapPin,
   Edit,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import UnitEditDialog from './UnitEditDialog'
@@ -33,6 +35,7 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [currentUnit, setCurrentUnit] = useState(unit)
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
 
 
 
@@ -66,11 +69,15 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
 
     try {
       await buildingService.updateUnitStatus(currentUnit.id, newStatus)
-    } catch {
+    } catch (error) {
       setCurrentUnit(prev => ({
         ...prev,
         status: previousStatus
       }))
+      
+      if (error && typeof error === 'object' && 'webhookError' in error) {
+        setWebhookErrorDialogOpen(true)
+      }
     } finally {
       setStatusUpdating(false)
     }
@@ -197,6 +204,25 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
         itemName={currentUnit.name || `Unidade ${currentUnit.number}`}
         itemType="unidade"
       />
+
+      <Dialog open={webhookErrorDialogOpen} onOpenChange={setWebhookErrorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Erro ao atualizar status
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Ocorreu um erro ao atualizar o status da unidade. Por favor, entre em contato com os desenvolvedores.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setWebhookErrorDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

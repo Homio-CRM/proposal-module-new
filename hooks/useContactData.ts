@@ -100,6 +100,7 @@ export function useContactData(
   const [error, setError] = useState<string | null>(null)
   const { customFieldIds } = useCustomFieldsContext()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const isMountedRef = useRef(true)
   
   const contactFieldsKeys = useMemo(() => 
     JSON.stringify(Object.keys(customFieldIds.contactFields).sort()), 
@@ -107,6 +108,8 @@ export function useContactData(
   )
 
   useEffect(() => {
+    isMountedRef.current = true
+    
     if (!contactId || !locationId) {
       setContactData(null)
       setLoading(false)
@@ -130,28 +133,41 @@ export function useContactData(
       return
     }
 
-    if (loadingPromises.has(cacheKey)) {
+    const isUsingSharedPromise = loadingPromises.has(cacheKey)
+    
+    if (isUsingSharedPromise) {
       setLoading(true)
       loadingPromises.get(cacheKey)!.then(data => {
-        setContactData(data)
-        setLoading(false)
-        setError(null)
+        if (isMountedRef.current) {
+          setContactData(data)
+          setLoading(false)
+          setError(null)
+        }
       }).catch(err => {
         if (err instanceof Error && err.name === 'AbortError') {
           return
         }
-        setError(err instanceof Error ? err.message : 'Erro desconhecido')
-        setContactData(null)
-        setLoading(false)
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err.message : 'Erro desconhecido')
+          setContactData(null)
+          setLoading(false)
+        }
       })
-      return
+      return () => {
+        isMountedRef.current = false
+      }
     }
 
     const loadContactData = async (): Promise<ContactData> => {
-      abortControllerRef.current = new AbortController()
-      const signal = abortControllerRef.current.signal
+      const currentController = new AbortController()
+      abortControllerRef.current = currentController
+      const signal = currentController.signal
 
       try {
+        if (signal.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+        
         setLoading(true)
         setError(null)
 
@@ -266,28 +282,54 @@ export function useContactData(
 
         contactCache.set(cacheKey, { data: processedContact, timestamp: Date.now() })
         loadingPromises.delete(cacheKey)
-        setContactData(processedContact)
+        
+        if (isMountedRef.current && abortControllerRef.current === currentController && !signal.aborted) {
+          setContactData(processedContact)
+        }
+        
         return processedContact
       } catch (err) {
         loadingPromises.delete(cacheKey)
         if (err instanceof Error && err.name === 'AbortError') {
+          if (isMountedRef.current && abortControllerRef.current === currentController) {
+            setContactData(null)
+            setLoading(false)
+          }
           throw err
         }
-        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
-        setError(errorMessage)
-        setContactData(null)
+        if (isMountedRef.current && abortControllerRef.current === currentController) {
+          const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
+          setError(errorMessage)
+          setContactData(null)
+        }
         throw err
       } finally {
-        setLoading(false)
+        if (isMountedRef.current && abortControllerRef.current === currentController && !signal.aborted) {
+          setLoading(false)
+        }
       }
     }
 
     const promise = loadContactData()
     loadingPromises.set(cacheKey, promise)
 
+    promise.catch(() => {
+      if (loadingPromises.get(cacheKey) === promise) {
+        loadingPromises.delete(cacheKey)
+      }
+    })
+
     return () => {
+      isMountedRef.current = false
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
+        const controller = abortControllerRef.current
+        if (!controller.signal.aborted) {
+          try {
+            controller.abort()
+          } catch (err) {
+          }
+        }
+        abortControllerRef.current = null
       }
     }
   }, [contactId, locationId, contactFieldsKeys, forceRefresh])

@@ -19,6 +19,7 @@ interface ProposalFiltersSidebarProps {
   onClearFilters: () => void
   developmentOptions?: SelectOption[]
   unitOptions?: SelectOption[]
+  profiles?: Array<{ id: string; name: string | null }>
 }
 
 const statusOptions = [
@@ -41,7 +42,8 @@ export function ProposalFiltersSidebar({
   onFiltersChange,
   onClearFilters,
   developmentOptions = defaultDevelopmentOptions,
-  unitOptions = defaultUnitOptions
+  unitOptions = defaultUnitOptions,
+  profiles = []
 }: ProposalFiltersSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [width, setWidth] = useState(320)
@@ -57,6 +59,35 @@ export function ProposalFiltersSidebar({
 
   const handleFilterChange = (key: keyof ProposalFilters, value: string) => {
     updateFilters({ [key]: value })
+  }
+
+  const handleCreatedByChange = (profileId: string, checked: boolean) => {
+    if (profileId === 'all') {
+      if (checked) {
+        updateFilters({ createdBy: 'all' })
+      }
+    } else {
+      const currentCreatedBy = filters.createdBy === 'all' ? [] : (Array.isArray(filters.createdBy) ? filters.createdBy : [])
+      
+      let newCreatedBy: string[] | 'all'
+      if (checked) {
+        newCreatedBy = [...currentCreatedBy, profileId]
+      } else {
+        newCreatedBy = currentCreatedBy.filter(id => id !== profileId)
+        if (newCreatedBy.length === 0) {
+          newCreatedBy = 'all'
+        }
+      }
+      
+      updateFilters({ createdBy: newCreatedBy })
+    }
+  }
+
+  const isCreatedByChecked = (profileId: string): boolean => {
+    if (profileId === 'all') {
+      return filters.createdBy === 'all'
+    }
+    return Array.isArray(filters.createdBy) && filters.createdBy.includes(profileId)
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -182,6 +213,36 @@ export function ProposalFiltersSidebar({
                     />
                     <Label htmlFor={`status-${option.value}`} className="text-sm text-neutral-700 cursor-pointer">
                       {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-neutral-900">Criado Por</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="created-by-all"
+                    checked={isCreatedByChecked('all')}
+                    onCheckedChange={(checked) => handleCreatedByChange('all', checked as boolean)}
+                  />
+                  <Label htmlFor="created-by-all" className="text-sm text-neutral-700 cursor-pointer">
+                    Todos
+                  </Label>
+                </div>
+                {profiles.map((profile) => (
+                  <div key={profile.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`created-by-${profile.id}`}
+                      checked={isCreatedByChecked(profile.id)}
+                      onCheckedChange={(checked) => handleCreatedByChange(profile.id, checked as boolean)}
+                    />
+                    <Label htmlFor={`created-by-${profile.id}`} className="text-sm text-neutral-700 cursor-pointer">
+                      {profile.name || 'Sem nome'}
                     </Label>
                   </div>
                 ))}
