@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ProposalStatus } from '@/lib/types/proposal'
 import { sendUnitStatusWebhook } from '@/lib/utils/unitWebhook'
 import { mapStatusFromDB } from '@/lib/services/buildingService'
+import { postToOperations } from '@/lib/operationsClient'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -182,6 +183,76 @@ export async function PATCH(
 
 			if (proposalUpdateError) {
 				console.error('[PATCH /api/proposals/[id]/status] Erro ao limpar reserved_until:', proposalUpdateError)
+			}
+		}
+
+		if (status === 'em_analise') {
+			try {
+				const { data: proposalDetails } = await supabaseAdmin
+					.from('proposals')
+					.select(`
+						opportunity_id,
+						responsible,
+						reserved_until,
+						notes,
+						unit:units(
+							name,
+							number,
+							tower,
+							floor,
+							buildings(name)
+						)
+					`)
+					.eq('id', proposalId)
+					.single()
+
+				if (proposalDetails?.opportunity_id) {
+					const { data: agencyConfig } = await supabaseAdmin
+						.from('agency_config')
+						.select('opportunity_building, opportunity_unit, opportunity_responsible, opportunity_observations, opportunity_reserve_until')
+						.eq('location_id', existingProposal.agency_id)
+						.single()
+
+					if (agencyConfig) {
+						const customFields: Array<{ id: string; field_value: string }> = []
+						const pushField = (id?: string | null, value?: string | null) => {
+							if (id && value && value.trim() !== '') {
+								customFields.push({ id, field_value: value.trim() })
+							}
+						}
+
+					const unitValue = proposalDetails?.unit
+					const unitData = Array.isArray(unitValue) ? unitValue[0] : unitValue
+					const buildingValue = unitData?.buildings
+					const buildingData = Array.isArray(buildingValue) ? buildingValue[0] : buildingValue
+					const buildingName = buildingData?.name || ''
+					const unitLabel = unitData?.name || unitData?.number || ''
+						const responsibleValue = proposalDetails.responsible || ''
+						const observationsValue = proposalDetails.notes || ''
+						const reservedValue = (reservedUntil ?? proposalDetails.reserved_until ?? '') || ''
+
+						pushField(agencyConfig.opportunity_building, buildingName)
+						pushField(agencyConfig.opportunity_unit, unitLabel)
+						pushField(agencyConfig.opportunity_responsible, responsibleValue)
+						pushField(agencyConfig.opportunity_observations, observationsValue)
+						pushField(agencyConfig.opportunity_reserve_until, reservedValue)
+
+						const apiKey = process.env.SUPABASE_OPERATIONS_ANON_KEY || ''
+					const headers: Record<string, string> | undefined = apiKey ? { apikey: apiKey } : undefined
+
+						await postToOperations(
+							'ghl-update-opportunity',
+							{
+								opportunityId: proposalDetails.opportunity_id,
+								customFields
+							},
+							headers,
+							existingProposal.agency_id
+						)
+					}
+				}
+			} catch (error) {
+				console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar atualização da oportunidade:', error)
 			}
 		}
 

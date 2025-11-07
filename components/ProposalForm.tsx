@@ -793,7 +793,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
 
       // Atualizar contato principal
       const primaryContactData = prepareContactData(formData.primaryContact)
-      console.log('[ProposalForm] Updating primary contact:', primaryContactData)
       
       const primaryContactRes = await fetch('/api/operations/contact/update', {
         method: 'POST',
@@ -817,7 +816,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
       // Atualizar contato adicional se existir
       if (formData.additionalContact && formData.additionalContact.name) {
         const additionalContactData = prepareContactData(formData.additionalContact)
-        console.log('[ProposalForm] Updating additional contact:', additionalContactData)
         
         const additionalContactRes = await fetch('/api/operations/contact/update', {
           method: 'POST',
@@ -833,6 +831,50 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
           const errorData = await additionalContactRes.json().catch(() => null)
           console.error('[ProposalForm] Additional contact update failed:', errorData)
           setServerError('Falha ao atualizar contato adicional')
+          setServerDetails(errorData)
+          setShowErrorModal(true)
+          return
+        }
+      }
+
+      const opportunityFieldValueMap: Record<string, string | undefined> = {
+        responsavel: formData.proposal.responsible ? formData.proposal.responsible.trim() : undefined,
+        empreendimento: formData.property.development ? formData.property.development.trim() : undefined,
+        unidade: formData.property.unit ? formData.property.unit.trim() : undefined,
+        andar: formData.property.floor ? formData.property.floor.trim() : undefined,
+        torre: formData.property.tower ? formData.property.tower.trim() : undefined,
+        observacoes: formData.property.observations ? formData.property.observations.trim() : undefined
+      }
+
+      if (formData.property.shouldReserveUnit !== false && formData.property.reservedUntil) {
+        opportunityFieldValueMap.reserve_until = formData.property.reservedUntil
+      }
+
+      const opportunityCustomFields: Array<{ id: string; field_value: string }> = []
+
+      Object.entries(customFieldIds.opportunityFields).forEach(([fieldKey, fieldId]) => {
+        const value = opportunityFieldValueMap[fieldKey]
+        if (typeof value === 'string' && value.trim() !== '') {
+          opportunityCustomFields.push({ id: fieldId, field_value: value })
+        }
+      })
+
+      if (opportunityCustomFields.length > 0) {
+        const opportunityUpdateRes = await fetch('/api/operations/opportunity/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            locationId: userData.activeLocation
+          },
+          body: JSON.stringify({
+            opportunityId: formData.proposal.opportunityId,
+            customFields: opportunityCustomFields
+          })
+        })
+
+        if (!opportunityUpdateRes.ok) {
+          const errorData = await opportunityUpdateRes.json().catch(() => null)
+          setServerError('Falha ao atualizar oportunidade')
           setServerDetails(errorData)
           setShowErrorModal(true)
           return

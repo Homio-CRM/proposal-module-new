@@ -107,15 +107,12 @@ class CustomFieldsService {
       // Processar opportunity fields
       opportunityKeys.forEach((key: string) => {
         if (key && key.trim()) {
-          console.log(`🔍 [CustomFieldsService] Processando opportunity key: "${key}"`)
           
           // Remover prefixo opportunity_ se existir
           const keyWithoutPrefix = key.replace(/^opportunity_/, '')
-          console.log(`🔍 [CustomFieldsService] Key sem prefixo: "${keyWithoutPrefix}"`)
           
           // Primeiro tentar com o fieldKey exato
           let fieldKey = `opportunity.${keyWithoutPrefix}`
-          console.log(`🔍 [CustomFieldsService] Buscando fieldKey: "${fieldKey}"`)
           
           let field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
           
@@ -124,33 +121,27 @@ class CustomFieldsService {
             // Para reserve_until, tentar reservar_at
             if (keyWithoutPrefix === 'reserve_until') {
               fieldKey = 'opportunity.reservar_at'
-              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
               field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
             }
             // Para responsible, tentar opportunityresponsavel
             if (keyWithoutPrefix === 'responsible') {
               fieldKey = 'opportunity.opportunityresponsavel'
-              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
               field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
             }
             // Para observations, tentar observaes
             if (keyWithoutPrefix === 'observations') {
               fieldKey = 'opportunity.observaes'
-              console.log(`🔍 [CustomFieldsService] Tentando fieldKey alternativo: "${fieldKey}"`)
               field = opportunityFields.find((f: CustomField) => f.fieldKey === fieldKey)
             }
           }
           
-          console.log(`🔍 [CustomFieldsService] Campo encontrado:`, field)
           
           if (field) {
             const formFieldName = opportunityFieldMapping[keyWithoutPrefix] || 
               opportunityFieldMapping[field.fieldKey.replace('opportunity.', '')] || 
               keyWithoutPrefix
-            console.log(`🔍 [CustomFieldsService] FormFieldName final: "${formFieldName}"`)
             opportunityFieldIds[formFieldName] = field.id
           } else {
-            console.log(`⚠️ [CustomFieldsService] Campo não encontrado para key: "${key}"`)
           }
         }
       })
@@ -158,37 +149,23 @@ class CustomFieldsService {
       // Processar contact fields
       contactKeys.forEach((key: string) => {
         if (key && key.trim()) {
-          console.log(`🔍 [CustomFieldsService] Processando contact key: "${key}"`)
           
           // Remover prefixo contact_ se existir
           const keyWithoutPrefix = key.replace(/^contact_/, '')
-          console.log(`🔍 [CustomFieldsService] Key sem prefixo: "${keyWithoutPrefix}"`)
           
           // Procurar por fieldKey que corresponde a contact.[key]
           const fieldKey = `contact.${keyWithoutPrefix}`
-          console.log(`🔍 [CustomFieldsService] Buscando fieldKey: "${fieldKey}"`)
           
           const field = contactFields.find((f: CustomField) => f.fieldKey === fieldKey)
-          console.log(`🔍 [CustomFieldsService] Campo encontrado:`, field)
           
           if (field) {
             const formFieldName = contactFieldMapping[keyWithoutPrefix] || keyWithoutPrefix
-            console.log(`🔍 [CustomFieldsService] FormFieldName: "${formFieldName}"`)
             contactFieldIds[formFieldName] = field.id
           } else {
-            console.log(`⚠️ [CustomFieldsService] Campo não encontrado para key: "${key}"`)
           }
         }
       })
 
-      console.log('🔍 [CustomFieldsService] opportunityFieldIds final:', opportunityFieldIds)
-      console.log('🔍 [CustomFieldsService] contactFieldIds final:', contactFieldIds)
-      
-      // Log todas as opportunity fields disponíveis para debug
-      console.log('🔍 [CustomFieldsService] Campos opportunity disponíveis:')
-      opportunityFields.forEach(f => {
-        console.log(`  - fieldKey: ${f.fieldKey}, name: ${f.name}, id: ${f.id}`)
-      })
 
       return {
         opportunityFields: opportunityFieldIds,

@@ -24,8 +24,6 @@ export async function POST(req: NextRequest) {
         )
 
         const data = await upstreamResponse.json().catch(() => null)
-        console.log('[operations/contact/update] Update response:', upstreamResponse.status)
-        console.log(util.inspect(data, { depth: null, colors: false, maxArrayLength: null }))
         const status = upstreamResponse.status
         return NextResponse.json(data ?? {}, { status })
     } catch (error) {

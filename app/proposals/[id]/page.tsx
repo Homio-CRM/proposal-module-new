@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
+import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ProposalSkeleton } from '@/components/skeletons/ProposalSkeleton'
@@ -17,6 +18,26 @@ export default function ProposalDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const { customFieldIds, setCustomFieldIds } = useCustomFieldsContext()
+  const ensureOpportunityCustomFieldMap = async () => {
+    if (Object.keys(customFieldIds.opportunityFields).length > 0) {
+      return customFieldIds.opportunityFields
+    }
+    if (!userData?.activeLocation) {
+      return {}
+    }
+    try {
+      const agencyConfig = await dataService.fetchAgencyConfigOnly(userData.activeLocation)
+      if (!agencyConfig) {
+        return {}
+      }
+      const ids = await dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, agencyConfig)
+      setCustomFieldIds(ids)
+      return ids.opportunityFields
+    } catch {
+      return {}
+    }
+  }
   
   const proposalId = params.id as string
   const [proposal, setProposal] = useState<ProposalListItem | null>(null)
@@ -27,7 +48,38 @@ export default function ProposalDetailPage() {
   const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
   
   const handleStatusChange = async (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => {
+    const buildOpportunityCustomFields = (
+      details: ProposalFormData,
+      fieldMap: Record<string, string>,
+      reservedOverride?: string
+    ) => {
+      const trimmedResponsible = details.proposal.responsible ? details.proposal.responsible.trim() : ''
+      const values: Record<string, string | undefined> = {
+        responsavel: trimmedResponsible || undefined,
+        empreendimento: details.property.development ? details.property.development.trim() : undefined,
+        unidade: details.property.unit ? details.property.unit.trim() : undefined,
+        andar: details.property.floor ? details.property.floor.trim() : undefined,
+        torre: details.property.tower ? details.property.tower.trim() : undefined,
+        observacoes: details.property.observations ? details.property.observations.trim() : undefined
+      }
+
+      const reserveSource = reservedOverride ?? details.property.reservedUntil
+      if (reserveSource && reserveSource.trim() !== '') {
+        values.reserve_until = reserveSource.trim()
+      }
+
+      const items: Array<{ id: string; field_value: string }> = []
+      Object.entries(fieldMap).forEach(([key, fieldId]) => {
+        const value = values[key]
+        if (value && value.trim() !== '') {
+          items.push({ id: fieldId, field_value: value.trim() })
+        }
+      })
+      return items
+    }
+
     try {
+      const opportunityFieldMap = await ensureOpportunityCustomFieldMap()
       const response = await fetch(`/api/proposals/${proposalId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -64,7 +116,7 @@ export default function ProposalDetailPage() {
           status: responseData?.status || newStatus
         }
       })
-
+      const nextDetailsRef: { current: ProposalFormData | null } = { current: null }
       setProposalDetails(prev => {
         if (!prev) return prev
         const updatedProperty = { ...prev.property }
@@ -84,7 +136,7 @@ export default function ProposalDetailPage() {
           }
         }
         
-        return {
+        const updatedDetails: ProposalFormData = {
           ...prev,
           proposal: {
             ...prev.proposal,
@@ -92,7 +144,39 @@ export default function ProposalDetailPage() {
           },
           property: updatedProperty
         }
+        nextDetailsRef.current = updatedDetails
+        return updatedDetails
       })
+
+      if (
+        newStatus === 'em_analise' &&
+        nextDetailsRef.current &&
+        nextDetailsRef.current.proposal.opportunityId &&
+        userData?.activeLocation
+      ) {
+        const nextDetails = nextDetailsRef.current
+        const opportunityCustomFields = buildOpportunityCustomFields(nextDetails, opportunityFieldMap, reservedUntil || undefined)
+        try {
+          const opportunityResponse = await fetch('/api/operations/opportunity/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              locationId: userData.activeLocation
+            },
+            body: JSON.stringify({
+              opportunityId: nextDetails.proposal.opportunityId,
+              customFields: opportunityCustomFields
+            })
+          })
+
+          if (!opportunityResponse.ok) {
+            const errorData = await opportunityResponse.json().catch(() => null)
+            console.error('Erro ao atualizar oportunidade:', errorData)
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar oportunidade:', error)
+        }
+      }
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
       throw error

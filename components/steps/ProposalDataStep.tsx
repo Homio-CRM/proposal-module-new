@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { parseISODateToLocal } from '@/lib/utils/date'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { API_ENDPOINTS } from '@/lib/config/performance'
@@ -238,13 +239,7 @@ export default function ProposalDataStep({
                             const extractedDateValue = typeof customFieldValue === 'string' 
                               ? customFieldValue 
                               : extractCustomFieldString(customFieldValue) || ''
-                            
-                            // Adicionar um dia para corrigir o offset
-                            const correctedDateValue = extractedDateValue ? addOneDayISO(extractedDateValue) : ''
-                            
-                            
-                            propertyData.reservedUntil = correctedDateValue
-                            
+                            propertyData.reservedUntil = extractedDateValue
                             break
                         }
                       }
@@ -547,7 +542,7 @@ export default function ProposalDataStep({
             Data da Proposta *
           </label>
           <CustomDatePicker
-            value={formData.proposalDate ? new Date(formData.proposalDate) : null}
+            value={parseISODateToLocal(formData.proposalDate)}
             onChange={(date) => handleInputChange('proposalDate', date ? date.toISOString().split('T')[0] : '')}
             placeholder="Selecione a data da proposta"
             error={!!errors['proposalDate']}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { parseISODateToLocal } from '@/lib/utils/date'
 import type { PropertyData } from '@/lib/types/proposal'
 import { getSupabase } from '@/lib/supabaseClient'
 import { Select } from '@/components/ui/select'
@@ -337,7 +338,7 @@ export default function PropertyDataStep({
               Reservado Até
             </label>
             <CustomDatePicker
-              value={formData.reservedUntil ? new Date(formData.reservedUntil) : null}
+              value={parseISODateToLocal(formData.reservedUntil)}
               onChange={(date) => handleInputChange('reservedUntil', date ? date.toISOString().split('T')[0] : '')}
               placeholder="Selecione a data de reserva"
               minDate={new Date()}

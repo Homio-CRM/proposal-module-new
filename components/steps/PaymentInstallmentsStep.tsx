@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { parseISODateToLocal } from '@/lib/utils/date'
 import { 
   Plus, 
   Trash2, 
@@ -294,7 +295,7 @@ export default function PaymentInstallmentsStep({
                       Data *
                     </label>
                     <CustomDatePicker
-                      value={installment.date ? new Date(installment.date) : null}
+                      value={parseISODateToLocal(installment.date)}
                       onChange={(date) => updateInstallment(installment.id, 'date', date ? date.toISOString().split('T')[0] : '')}
                       placeholder="Selecione a data"
                       minDate={new Date()}

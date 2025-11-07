@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { parseISODateToLocal } from '@/lib/utils/date'
 import { FormattedInput } from '@/components/ui/formatted-input'
 import type { ContactData } from '@/lib/types/proposal'
 
@@ -137,7 +138,7 @@ export default function PrimaryContactStep({
             Data de Nascimento *
           </label>
           <CustomDatePicker
-            value={formData.birthDate ? new Date(formData.birthDate) : null}
+            value={parseISODateToLocal(formData.birthDate)}
             onChange={(date) => handleInputChange('birthDate', date ? date.toISOString().split('T')[0] : '')}
             placeholder="Selecione a data de nascimento"
             maxDate={new Date()}

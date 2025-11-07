@@ -13,6 +13,7 @@ import {
   Send
 } from 'lucide-react'
 import type { ProposalFormData } from '@/lib/types/proposal'
+import { parseISODateToLocal } from '@/lib/utils/date'
 
 interface SummaryStepProps {
   data: ProposalFormData
@@ -38,8 +39,9 @@ export default function SummaryStep({ data, onPublish }: SummaryStepProps) {
     }).format(value)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR')
+  const formatDate = (dateString?: string | null) => {
+    const date = parseISODateToLocal(dateString ?? undefined)
+    return date ? date.toLocaleDateString('pt-BR') : 'Não informado'
   }
 
   const getTotalValue = () => {
