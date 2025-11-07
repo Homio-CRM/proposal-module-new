@@ -9,7 +9,7 @@ import { ProposalFiltersSidebar } from "@/components/ProposalFiltersSidebar";
 import { ProposalTable } from "@/components/ProposalTable";
 import { ProposalFilters, ProposalListItem } from "@/lib/types/proposal";
 import { dataService } from "@/lib/services/dataService";
-import { Plus, Trash2, Settings } from "lucide-react";
+import { Plus, Trash2, Settings, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 export default function ProposalsPage() {
@@ -324,6 +324,11 @@ export default function ProposalsPage() {
               <Link href="/config">
                 <Button variant="outline" size="icon">
                   <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="https://docs.google.com/spreadsheets/d/1IVEDwmmCk6MxxqoZqb8D-gW4fkwavVTyw8FRaokcuUM/edit?usp=sharing" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="icon">
+                  <ExternalLink className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
