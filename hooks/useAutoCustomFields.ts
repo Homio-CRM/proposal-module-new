@@ -33,16 +33,16 @@ export function useAutoCustomFields() {
         }
 
         // 2. Buscar custom field IDs baseado na configuração
-        const customFieldIds = await dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, agencyConfig)
+        const fetchedCustomFieldIds = await dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, agencyConfig)
 
         // 3. Atualizar contexto
-        setCustomFieldIds(customFieldIds)
+        setCustomFieldIds(fetchedCustomFieldIds)
 
-      } catch (error) {
+      } catch {
         hasLoadedRef.current = false // Permitir nova tentativa em caso de erro
       }
     }
 
     loadCustomFieldsAutomatically()
-  }, [userData?.activeLocation, userLoading]) // Removido setCustomFieldIds e customFieldIds das dependências
+  }, [customFieldIds.contactFields, customFieldIds.opportunityFields, setCustomFieldIds, userData, userData?.activeLocation, userLoading])
 }

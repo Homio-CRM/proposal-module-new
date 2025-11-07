@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { postToOperations } from '@/lib/operationsClient'
-import util from 'util'
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,7 +24,7 @@ export async function POST(req: NextRequest) {
         const data = await upstreamResponse.json().catch(() => null)
         const status = upstreamResponse.status
         return NextResponse.json(data ?? {}, { status })
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch contact' }, { status: 500 })
     }
 }

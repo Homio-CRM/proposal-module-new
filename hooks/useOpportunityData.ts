@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
-import { opportunityService, OpportunityData, ContactData } from '@/lib/services/opportunityService'
+import { opportunityService } from '@/lib/services/opportunityService'
 
 export function useOpportunityData() {
   const { getAllMappings } = useCustomFieldsContext()

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import util from 'util'
 
 async function fetchCustomFieldsFromUpstream(locationId: string, model?: string) {
     const apiKey = process.env.SUPABASE_OPERATIONS_ANON_KEY || ''
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
 
         const { data, status } = await fetchCustomFieldsFromUpstream(finalLocationId, model)
         return NextResponse.json(data ?? {}, { status })
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to fetch custom fields' }, { status: 500 })
     }
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { authService } from '@/lib/auth/authService'
 import { userDataService } from '@/lib/auth/userDataService'
-import { userCache, CACHE_KEYS } from '@/lib/cache/userCache'
 import { dataService } from '@/lib/services/dataService'
 import type { UserData, UseUserDataReturn } from '@/lib/types'
 
@@ -26,25 +25,6 @@ export default function useUserData(): UseUserDataReturn {
         }
     }
 
-    async function initializeUserSession(cacheKey: string): Promise<void> {
-        try {
-            const cachedData = userCache.get<UserData>(cacheKey)
-            if (cachedData) {
-                setUserData(cachedData)
-                setLoading(false)
-                return
-            }
-
-            setError('Authentication required - no valid session found')
-            setUserData(null)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unknown error')
-            setUserData(null)
-        } finally {
-            setLoading(false)
-        }
-    }
-
     useEffect(() => {
         if (hasInitialized.current) {
             return
@@ -66,7 +46,7 @@ export default function useUserData(): UseUserDataReturn {
                     const result = await globalInitializationPromise
                     setUserData(result)
                     setLoading(false)
-                } catch (error) {
+                } catch {
                     setError('Failed to get user data')
                     setLoading(false)
                 }
@@ -102,10 +82,10 @@ export default function useUserData(): UseUserDataReturn {
                     globalError = null
                     
                     return userData
-                } catch (error) {
+                } catch (err) {
                     globalError = 'Failed to get user data'
                     globalLoading = false
-                    throw error
+                    throw err
                 }
             })()
 
@@ -114,7 +94,7 @@ export default function useUserData(): UseUserDataReturn {
                 setUserData(result)
                 setLoading(false)
                 setError(null)
-            } catch (error) {
+            } catch {
                 setError('Failed to get user data')
                 setLoading(false)
             }

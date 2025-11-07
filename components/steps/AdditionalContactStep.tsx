@@ -214,14 +214,19 @@ export default function AdditionalContactStep({
           <label htmlFor="nationality" className="block text-sm font-medium text-neutral-700 mb-2">
             Nacionalidade
           </label>
-          <Input
+          <Select
             id="nationality"
-            type="text"
             value={formData.nationality}
             onChange={(e) => handleInputChange('nationality', e.target.value)}
-            placeholder="Digite a nacionalidade"
             className={errors['additionalContact.nationality'] ? 'border-red-500' : ''}
-          />
+          >
+            <option value="">Selecione a nacionalidade</option>
+            {NATIONALITY_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
           {errors['additionalContact.nationality'] && (
             <p className="text-sm text-red-600 mt-1">{errors['additionalContact.nationality']}</p>
           )}

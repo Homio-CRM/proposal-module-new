@@ -18,6 +18,7 @@ export default function TestMappingPage() {
     opportunityFormData: Record<string, string | number | boolean | null>;
     contactFormData: Record<string, string | number | boolean | null>;
   } | null>(null)
+  const [mappings, setMappings] = useState<ReturnType<typeof getAllMappings> | null>(null)
 
   const handleTestMapping = async () => {
     if (!opportunityId.trim()) {
@@ -34,7 +35,7 @@ export default function TestMappingPage() {
   }
 
   const handleTestMappings = () => {
-    const mappings = getAllMappings()
+    setMappings(getAllMappings())
   }
 
   return (
@@ -65,6 +66,22 @@ export default function TestMappingPage() {
           {error && (
             <div className="text-red-600">
               <p>Erro: {error}</p>
+            </div>
+          )}
+          {mappings && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Mapeamentos de Oportunidade:</h3>
+                <pre className="bg-gray-100 p-2 rounded text-sm overflow-auto">
+                  {JSON.stringify(mappings.opportunityFields, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Mapeamentos de Contato:</h3>
+                <pre className="bg-gray-100 p-2 rounded text-sm overflow-auto">
+                  {JSON.stringify(mappings.contactFields, null, 2)}
+                </pre>
+              </div>
             </div>
           )}
         </CardContent>

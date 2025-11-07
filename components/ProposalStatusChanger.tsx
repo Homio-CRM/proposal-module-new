@@ -153,6 +153,7 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
       <Card className="border-2 border-primary-200 bg-primary-50">
         <CardHeader>
           <CardTitle className="text-lg">Status da Proposta</CardTitle>
+          <p className="text-sm text-gray-600">ID: {proposalId}</p>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3 flex-wrap">

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { dataService } from '@/lib/services/dataService'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 
 interface ContactData {
@@ -326,13 +325,13 @@ export function useContactData(
         if (!controller.signal.aborted) {
           try {
             controller.abort()
-          } catch (err) {
+          } catch {
           }
         }
         abortControllerRef.current = null
       }
     }
-  }, [contactId, locationId, contactFieldsKeys, forceRefresh])
+  }, [contactId, locationId, contactFieldsKeys, customFieldIds.contactFields, forceRefresh])
 
   return { contactData, loading, error }
 }

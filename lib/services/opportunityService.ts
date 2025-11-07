@@ -64,7 +64,7 @@ class OpportunityService {
         contact: contact
       }
 
-    } catch (error) {
+    } catch {
       return { opportunity: null, contact: null }
     }
   }

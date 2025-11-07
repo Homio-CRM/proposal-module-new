@@ -8,7 +8,7 @@ interface ContactSkeletonProps {
 
 export function ContactSkeleton({ title, showIcon = true }: ContactSkeletonProps) {
   return (
-    <Card>
+    <Card aria-label={title}>
       <CardHeader>
         <div className="flex items-center gap-2">
           {showIcon && <Skeleton className="h-5 w-5" />}

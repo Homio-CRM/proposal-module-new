@@ -11,7 +11,7 @@ function decryptUserData(encryptedUserData: string, sharedSecretKey: string): Us
         const decrypted = CryptoJS.AES.decrypt(encryptedUserData, sharedSecretKey).toString(CryptoJS.enc.Utf8)
         const userData = JSON.parse(decrypted)
         return userData
-    } catch (error) {
+    } catch {
         throw new Error('Failed to decrypt user data')
     }
 }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<UserData 
         const userData = decryptUserData(encryptedData, process.env.HOMIO_APP_SHARED_SECRET)
 
         return NextResponse.json(userData)
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Failed to decrypt user data' }, { status: 400 })
     }
 }

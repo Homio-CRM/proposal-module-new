@@ -88,7 +88,7 @@ export default function BuildingForm() {
     try {
       const supabase = await getSupabase()
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('buildings')
         .insert({
           name: formData.name.trim(),

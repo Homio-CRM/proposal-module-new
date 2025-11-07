@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { postToOperations } from '@/lib/operationsClient'
-import util from 'util'
 
 export async function POST(req: NextRequest) {
     try {

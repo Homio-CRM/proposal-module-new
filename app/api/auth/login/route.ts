@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
                 await supabaseAdmin.auth.admin.updateUserById(userId, { password: devPassword })
             }
 
-            const profileResult = await supabaseAdmin.from('profiles').upsert({
+            await supabaseAdmin.from('profiles').upsert({
                 id: userId,
                 agency_id: userData.activeLocation,
                 homio_user_id: userData.userId,
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
             await supabaseAdmin.auth.admin.updateUserById(userId, { password: userPassword })
         }
 
-        const profileResult = await supabaseAdmin.from('profiles').upsert({
+        await supabaseAdmin.from('profiles').upsert({
             id: userId,
             agency_id: userData.activeLocation,
             homio_user_id: userData.userId,

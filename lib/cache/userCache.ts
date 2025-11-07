@@ -47,8 +47,11 @@ class UserCache {
     }
 
     debug(): void {
-        for (const [, item] of Array.from(this.cache.entries())) {
-            const isExpired = Date.now() - item.timestamp > item.ttl
+        for (const [key, item] of Array.from(this.cache.entries())) {
+            const expired = Date.now() - item.timestamp > item.ttl
+            if (expired) {
+                this.cache.delete(key)
+            }
         }
     }
 }

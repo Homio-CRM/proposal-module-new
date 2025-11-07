@@ -3,9 +3,9 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ProposalListItem, ProposalStatus } from '@/lib/types/proposal'
+import { ProposalListItem } from '@/lib/types/proposal'
 import { getStatusBadgeVariant, getStatusLabel } from '@/lib/utils/proposalStatus'
-import { Trash2 } from 'lucide-react'
+import { Copy, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface ProposalTableProps {
@@ -47,6 +47,19 @@ export function ProposalTable({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      {selectedProposals.length > 0 && (
+        <div className="flex justify-end p-3 border-b border-gray-200">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onBulkDelete}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Excluir Selecionadas ({selectedProposals.length})
+          </Button>
+        </div>
+      )}
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full min-w-[900px]">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -78,7 +91,8 @@ export function ProposalTable({
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Valor Total
               </th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                Ações
               </th>
             </tr>
           </thead>
@@ -89,7 +103,10 @@ export function ProposalTable({
                 className={`group cursor-pointer transition-colors duration-150 ${
                   index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 } hover:bg-gray-100`}
-                onClick={() => router.push(`/proposals/${proposal.id}`)}
+                onClick={() => {
+                  onView(proposal.id)
+                  router.push(`/proposals/${proposal.id}`)
+                }}
               >
                 <td className="px-2 py-3 whitespace-nowrap w-10">
                   <Checkbox
@@ -131,18 +148,31 @@ export function ProposalTable({
                 <td className="px-2 py-3 whitespace-nowrap text-sm text-neutral-900 min-w-[100px]">
                   {formatPrice(proposal.price)}
                 </td>
-                <td className="px-2 py-3 whitespace-nowrap text-center w-12">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(proposal.id)
-                    }}
-                    className="h-7 w-7 p-0 border-transparent hover:bg-red-50 hover:border-red-300"
-                  >
-                    <Trash2 className="h-3 w-3 text-red-600" />
-                  </Button>
+                <td className="px-2 py-3 whitespace-nowrap text-center w-24">
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onCopy(proposal.id)
+                      }}
+                      className="h-7 w-7 p-0 border-transparent hover:bg-primary-50 hover:border-primary-300"
+                    >
+                      <Copy className="h-3 w-3 text-primary-600" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(proposal.id)
+                      }}
+                      className="h-7 w-7 p-0 border-transparent hover:bg-red-50 hover:border-red-300"
+                    >
+                      <Trash2 className="h-3 w-3 text-red-600" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
