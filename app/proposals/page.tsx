@@ -9,11 +9,14 @@ import { ProposalFiltersSidebar } from "@/components/ProposalFiltersSidebar";
 import { ProposalTable } from "@/components/ProposalTable";
 import { ProposalFilters, ProposalListItem } from "@/lib/types/proposal";
 import { dataService } from "@/lib/services/dataService";
+import { usePreferencesContext } from "@/lib/contexts/PreferencesContext";
+import { canManageProposals as canManageProposalsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from "@/lib/utils/permissions";
 import { Plus, Trash2, Settings, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 export default function ProposalsPage() {
   const { userData, loading, error } = useUserDataContext();
+  const { preferences, loading: preferencesLoading } = usePreferencesContext();
   const pathname = usePathname();
   const [filters, setFilters] = useState<ProposalFilters>({
     search: '',
@@ -26,6 +29,17 @@ export default function ProposalsPage() {
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [profiles, setProfiles] = useState<Array<{ id: string; name: string | null }>>([]);
   const [proposalsLoading, setProposalsLoading] = useState(true);
+
+  const userRole = userData?.role ?? 'user';
+  const allowViewProposals = canViewProposalsPermission(preferences ?? null, userRole);
+  const allowManageProposals = canManageProposalsPermission(preferences ?? null, userRole);
+  const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userRole) ? userData?.userId : undefined;
+  const showCreatedByFilter = !restrictToCreator;
+  useEffect(() => {
+    if (!allowManageProposals) {
+      setSelectedProposals([]);
+    }
+  }, [allowManageProposals]);
   const developmentOptions = useMemo(() => {
     const set = new Set<string>([''])
     proposals.forEach(p => {
@@ -47,13 +61,29 @@ export default function ProposalsPage() {
   }, [proposals])
 
   const loadProposals = useCallback(async () => {
-    if (!userData?.companyId) return;
+    if (!userData?.companyId || !allowViewProposals) {
+      setProposals([]);
+      setProfiles([]);
+      setProposalsLoading(false);
+      return;
+    }
     
     try {
       setProposalsLoading(true);
+      const restrictOptions = restrictToCreator ? { restrictToUserId: restrictToCreator } : undefined;
       const [proposalsData, profilesData] = await Promise.all([
-        dataService.fetchProposalsData(userData.companyId),
-        dataService.fetchProfilesWithProposals(userData.companyId)
+        dataService.fetchProposalsData(
+          userData.companyId,
+          restrictOptions ?? {}
+        ),
+        restrictToCreator
+          ? Promise.resolve([
+              {
+                id: userData.userId,
+                name: userData.userName ?? null
+              }
+            ])
+          : dataService.fetchProfilesWithProposals(userData.companyId)
       ]);
       setProposals(proposalsData);
       setProfiles(profilesData);
@@ -62,33 +92,39 @@ export default function ProposalsPage() {
     } finally {
       setProposalsLoading(false);
     }
-  }, [userData?.companyId]);
+  }, [userData?.companyId, allowViewProposals, restrictToCreator, userData?.userId, userData?.userName]);
 
   useEffect(() => {
-    if (userData && !loading) {
+    if (userData && !loading && !preferencesLoading) {
       loadProposals();
     }
-  }, [userData, loading, loadProposals]);
+  }, [userData, loading, preferencesLoading, loadProposals, restrictToCreator]);
 
   const prevPathnameRef = useRef<string | null>(null);
   
   useEffect(() => {
-    if (pathname === '/proposals' && userData?.companyId && !loading) {
+    if (pathname === '/proposals' && userData?.companyId && !loading && !preferencesLoading) {
       const prevPathname = prevPathnameRef.current;
       
       if (prevPathname !== pathname && prevPathname !== null) {
-        dataService.clearProposalsCache(userData.companyId);
+        dataService.clearProposalsCache(
+          userData.companyId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        );
         loadProposals();
       }
       
       prevPathnameRef.current = pathname;
     }
-  }, [pathname, userData?.companyId, loading, loadProposals]);
+  }, [pathname, userData?.companyId, loading, preferencesLoading, loadProposals, restrictToCreator]);
 
   useEffect(() => {
     const handleFocus = () => {
-      if (userData?.companyId && !loading) {
-        dataService.clearProposalsCache(userData.companyId);
+      if (userData?.companyId && !loading && !preferencesLoading) {
+        dataService.clearProposalsCache(
+          userData.companyId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        );
         loadProposals();
       }
     };
@@ -98,7 +134,7 @@ export default function ProposalsPage() {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, [userData?.companyId, loading, loadProposals]);
+  }, [userData?.companyId, loading, preferencesLoading, loadProposals, restrictToCreator]);
 
   const filteredProposals = useMemo(() => {
     return proposals
@@ -144,14 +180,23 @@ export default function ProposalsPage() {
   const handleCopy = () => {};
 
   const handleDelete = async (proposalId: string) => {
-    if (!userData?.companyId) return;
+    if (!userData?.companyId || !allowManageProposals) return;
     
     try {
-      await dataService.deleteProposal(proposalId);
+      await dataService.deleteProposal(
+        proposalId,
+        restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+      );
       
       // Clear cache and reload proposals
-      dataService.clearProposalsCache(userData.companyId);
-      const proposalsData = await dataService.fetchProposalsData(userData.companyId);
+      dataService.clearProposalsCache(
+        userData.companyId,
+        restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+      );
+      const proposalsData = await dataService.fetchProposalsData(
+        userData.companyId,
+        restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+      );
       setProposals(proposalsData);
       
       // Remove from selected if it was selected
@@ -166,6 +211,7 @@ export default function ProposalsPage() {
   const handleView = () => {};
 
   const handleSelectProposal = (id: string, selected: boolean) => {
+    if (!allowManageProposals) return;
     if (selected) {
       setSelectedProposals(prev => [...prev, id]);
     } else {
@@ -174,6 +220,7 @@ export default function ProposalsPage() {
   };
 
   const handleSelectAll = () => {
+    if (!allowManageProposals) return;
     if (selectedProposals.length === filteredProposals.length) {
       setSelectedProposals([]);
     } else {
@@ -188,7 +235,7 @@ export default function ProposalsPage() {
     }
   };
 
-  if (loading || proposalsLoading) {
+  if (loading || proposalsLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="flex min-w-0">
@@ -296,6 +343,18 @@ export default function ProposalsPage() {
     );
   }
 
+  if (!allowViewProposals) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl">⚠️</div>
+          <h2 className="text-xl font-semibold text-neutral-900">Sem permissão para visualizar propostas</h2>
+          <p className="text-neutral-600">Entre em contato com um administrador para solicitar acesso.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="flex min-w-0">
@@ -306,6 +365,7 @@ export default function ProposalsPage() {
           developmentOptions={developmentOptions}
           unitOptions={unitOptions}
           profiles={profiles}
+          allowCreatedByFilter={showCreatedByFilter}
         />
 
         <div className="flex-1 p-6 overflow-visible min-w-0">
@@ -315,17 +375,21 @@ export default function ProposalsPage() {
               <p className="text-neutral-600">Gerencie suas propostas imobiliárias</p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/proposals/create">
-                <Button variant="default">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Proposta
-                </Button>
-              </Link>
-              <Link href="/config">
-                <Button variant="outline" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
+              {allowManageProposals && (
+                <Link href="/proposals/create">
+                  <Button variant="default">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Proposta
+                  </Button>
+                </Link>
+              )}
+              {userRole === 'admin' && (
+                <Link href="/config">
+                  <Button variant="outline" size="icon">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
               <Link href="https://docs.google.com/spreadsheets/d/1IVEDwmmCk6MxxqoZqb8D-gW4fkwavVTyw8FRaokcuUM/edit?usp=sharing" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="icon">
                   <ExternalLink className="h-4 w-4" />
@@ -356,6 +420,7 @@ export default function ProposalsPage() {
             onSelectProposal={handleSelectProposal}
             onSelectAll={handleSelectAll}
             onBulkDelete={handleBulkDelete}
+            canManage={allowManageProposals}
           />
 
           <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">

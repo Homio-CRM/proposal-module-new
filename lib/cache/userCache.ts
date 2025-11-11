@@ -63,5 +63,6 @@ export const CACHE_KEYS = {
     USER_SESSION: 'user_session',
     USER_PROFILE: 'user_profile',
     LISTINGS: 'listings',
-    CONDOMINIUMS: 'condominiums'
+    CONDOMINIUMS: 'condominiums',
+    PREFERENCES: 'preferences'
 } as const

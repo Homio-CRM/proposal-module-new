@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { useCustomFieldsContext } from '@/lib/contexts/CustomFieldsContext'
 import { dataService, AgencyConfig } from '@/lib/services/dataService'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { Select } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import type { PreferencesPayload } from '@/lib/types/preferences'
 
 interface ConfigData {
   opportunityFields: {
@@ -41,6 +46,7 @@ interface ConfigData {
 export default function ConfigPage() {
   const { userData, loading } = useUserDataContext()
   const { setCustomFieldIds, getCustomFieldId } = useCustomFieldsContext()
+  const { preferences, loading: preferencesLoading, update: updatePreferences } = usePreferencesContext()
   const router = useRouter()
   
   // Usar ref para evitar loop infinito
@@ -76,9 +82,47 @@ export default function ConfigPage() {
   const [agencyConfig, setAgencyConfig] = useState<AgencyConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successType, setSuccessType] = useState<'permissions' | 'fields' | null>(null)
+  const [savingPermissions, setSavingPermissions] = useState(false)
+  const [savingFields, setSavingFields] = useState(false)
+  const [initialConfigData, setInitialConfigData] = useState<ConfigData>({
+    opportunityFields: {
+      empreendimento: '',
+      unidade: '',
+      responsavel: '',
+      observacoes: '',
+      reserve_until: ''
+    },
+    contactFields: {
+      empreendimento: '',
+      unidade: '',
+      andar: '',
+      torre: '',
+      cpf: '',
+      rg: '',
+      orgaoEmissor: '',
+      nacionalidade: '',
+      estadoCivil: '',
+      profissao: '',
+      cep: '',
+      endereco: '',
+      cidade: '',
+      bairro: '',
+      estado: ''
+    }
+  })
+  const [initialPreferences, setInitialPreferences] = useState<PreferencesPayload | null>(null)
+  const [preferencesForm, setPreferencesForm] = useState<PreferencesPayload>({
+    canViewProposals: 'admin',
+    canManageProposals: 'admin',
+    canViewBuildings: 'admin',
+    canManageBuildings: 'admin',
+    canManageOnlyAssinedProposals: false
+  })
 
   const agencyName = agencyConfig?.opportunity_name || "MIVITA"
   const locationId = userData?.activeLocation || ''
+  const isAdmin = userData?.role === 'admin'
 
   useEffect(() => {
     const loadAgencyConfig = async () => {
@@ -126,6 +170,7 @@ export default function ConfigPage() {
           }
         };
         setConfigData(newConfigData);
+        setInitialConfigData(JSON.parse(JSON.stringify(newConfigData)));
 
         // 2. Buscar custom field IDs em background (não bloquear)
         dataService.fetchCustomFieldIdsForConfig(userData.activeLocation, config)
@@ -147,6 +192,26 @@ export default function ConfigPage() {
     }
   }, [userData, loading]);
 
+  useEffect(() => {
+    if (preferences) {
+      const mapped: PreferencesPayload = {
+        canViewProposals: preferences.canViewProposals,
+        canManageProposals: preferences.canManageProposals,
+        canViewBuildings: preferences.canViewBuildings,
+        canManageBuildings: preferences.canManageBuildings,
+        canManageOnlyAssinedProposals: preferences.canManageOnlyAssinedProposals
+      }
+      setPreferencesForm(mapped)
+      setInitialPreferences({ ...mapped })
+    }
+  }, [preferences])
+
+  useEffect(() => {
+    if (!preferencesLoading && initialPreferences === null) {
+      setInitialPreferences({ ...preferencesForm })
+    }
+  }, [preferencesLoading, initialPreferences, preferencesForm])
+
   const handleInputChange = (section: keyof ConfigData, field: string, value: string) => {
     setConfigData(prev => ({
       ...prev,
@@ -157,36 +222,72 @@ export default function ConfigPage() {
     }))
   }
 
-  const handleSave = async () => {
-    if (!userData?.activeLocation) {
+  const handlePermissionChange = <K extends keyof PreferencesPayload>(field: K, value: PreferencesPayload[K]) => {
+    setPreferencesForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const hasPreferenceChanges = useMemo(() => {
+    if (!initialPreferences) {
+      return false
+    }
+    return JSON.stringify(initialPreferences) !== JSON.stringify(preferencesForm)
+  }, [initialPreferences, preferencesForm])
+
+  const hasFieldChanges = useMemo(() => {
+    return JSON.stringify(configData) !== JSON.stringify(initialConfigData)
+  }, [configData, initialConfigData])
+
+  const handleSavePermissions = async () => {
+    if (!isAdmin || !userData?.activeLocation || !hasPreferenceChanges) {
+      return
+    }
+    try {
+      setSavingPermissions(true)
+      await updatePreferences(preferencesForm)
+      setInitialPreferences({ ...preferencesForm })
+      setSuccessType('permissions')
+      setShowSuccessModal(true)
+    } catch (error) {
+      console.error('❌ Erro ao salvar permissões:', error)
+      alert('Erro ao salvar permissões. Tente novamente.')
+    } finally {
+      setSavingPermissions(false)
+    }
+  }
+
+  const handleSaveCustomFields = async () => {
+    if (!userData?.activeLocation || !hasFieldChanges) {
       return
     }
 
     try {
-      setConfigLoading(true)
+      setSavingFields(true)
 
-      // Salvar configuração e remapear custom fields
       const result = await dataService.saveAgencyConfigAndRemapFields(
         userData.activeLocation,
         configData
       )
 
-      // Atualizar estado local
       setAgencyConfig(result.config)
       setCustomFieldIds(result.customFieldIds)
-
-      // Mostrar modal de sucesso
+      setInitialConfigData(JSON.parse(JSON.stringify(configData)))
+      setSuccessType('fields')
       setShowSuccessModal(true)
     } catch (error) {
-      console.error('❌ Erro ao salvar configurações:', error)
-      alert('Erro ao salvar configurações. Tente novamente.')
+      console.error('❌ Erro ao salvar campos customizados:', error)
+      alert('Erro ao salvar campos customizados. Tente novamente.')
     } finally {
-      setConfigLoading(false)
+      setSavingFields(false)
     }
   }
 
 
-  if (loading || configLoading) {
+  const showSkeleton = loading || configLoading || (preferencesLoading && !preferences)
+
+  if (showSkeleton) {
     return (
       <div className="container mx-auto p-6">
         <div className="space-y-6">
@@ -272,6 +373,90 @@ export default function ConfigPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Permissões da Plataforma</CardTitle>
+            <CardDescription>Controle de acesso a propostas e empreendimentos</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Visualizar Propostas</Label>
+                <Select
+                  value={preferencesForm.canViewProposals}
+                  onChange={(event) => handlePermissionChange('canViewProposals', event.target.value as PreferencesPayload['canViewProposals'])}
+                  disabled={!isAdmin || preferencesLoading}
+                >
+                  <option value="admin">Somente administradores</option>
+                  <option value="adminAndUser">Administradores e usuários</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Gerenciar Propostas</Label>
+                <Select
+                  value={preferencesForm.canManageProposals}
+                  onChange={(event) => handlePermissionChange('canManageProposals', event.target.value as PreferencesPayload['canManageProposals'])}
+                  disabled={!isAdmin || preferencesLoading}
+                >
+                  <option value="admin">Somente administradores</option>
+                  <option value="adminAndUser">Administradores e usuários</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Visualizar Empreendimentos</Label>
+                <Select
+                  value={preferencesForm.canViewBuildings}
+                  onChange={(event) => handlePermissionChange('canViewBuildings', event.target.value as PreferencesPayload['canViewBuildings'])}
+                  disabled={!isAdmin || preferencesLoading}
+                >
+                  <option value="admin">Somente administradores</option>
+                  <option value="adminAndUser">Administradores e usuários</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Gerenciar Empreendimentos</Label>
+                <Select
+                  value={preferencesForm.canManageBuildings}
+                  onChange={(event) => handlePermissionChange('canManageBuildings', event.target.value as PreferencesPayload['canManageBuildings'])}
+                  disabled={!isAdmin || preferencesLoading}
+                >
+                  <option value="admin">Somente administradores</option>
+                  <option value="adminAndUser">Administradores e usuários</option>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-md border border-neutral-200 p-4">
+              <Checkbox
+                id="canManageOnlyAssinedProposals"
+                checked={preferencesForm.canManageOnlyAssinedProposals}
+                onCheckedChange={(checked) =>
+                  handlePermissionChange(
+                    'canManageOnlyAssinedProposals',
+                    Boolean(checked) as PreferencesPayload['canManageOnlyAssinedProposals']
+                  )
+                }
+                disabled={!isAdmin || preferencesLoading}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="canManageOnlyAssinedProposals">Limitar usuários às propostas próprias</Label>
+                <p className="text-sm text-neutral-600">
+                  Quando ativo, usuários não administradores só podem visualizar e editar propostas criadas por eles mesmos.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+          {isAdmin && (
+            <div className="flex justify-end px-6 pb-6">
+              <Button
+                onClick={handleSavePermissions}
+                disabled={savingPermissions || preferencesLoading || !hasPreferenceChanges}
+              >
+                {savingPermissions ? 'Salvando...' : 'Salvar Permissões'}
+              </Button>
+            </div>
+          )}
         </Card>
 
         <Card>
@@ -617,18 +802,26 @@ export default function ConfigPage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button 
-            onClick={handleSave} 
-            size="lg" 
-            disabled={configLoading}
+          <Button
+            onClick={handleSaveCustomFields}
+            size="lg"
+            disabled={savingFields || !hasFieldChanges}
           >
-            {configLoading ? 'Salvando...' : 'Salvar Configurações'}
+            {savingFields ? 'Salvando...' : 'Salvar Campos Customizados'}
           </Button>
         </div>
       </div>
 
       {/* Modal de Sucesso */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+      <Dialog
+        open={showSuccessModal}
+        onOpenChange={(open) => {
+          setShowSuccessModal(open)
+          if (!open) {
+            setSuccessType(null)
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -640,7 +833,9 @@ export default function ConfigPage() {
               Configurações Salvas!
             </DialogTitle>
             <DialogDescription>
-              Suas configurações foram salvas com sucesso. Os custom fields foram remapeados automaticamente.
+              {successType === 'permissions'
+                ? 'Permissões atualizadas com sucesso.'
+                : 'Campos customizados salvos com sucesso.'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">

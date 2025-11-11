@@ -4,6 +4,7 @@ import "./globals.css";
 import "./datepicker.css";
 import { UserDataProvider } from "@/lib/contexts/UserDataContext";
 import { CustomFieldsProvider } from "@/lib/contexts/CustomFieldsContext";
+import { PreferencesProvider } from "@/lib/contexts/PreferencesContext";
 import { AutoCustomFieldsLoader } from "@/components/AutoCustomFieldsLoader";
 
 const geistSans = Geist({
@@ -32,10 +33,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <UserDataProvider>
-          <CustomFieldsProvider>
-            <AutoCustomFieldsLoader />
-            {children}
-          </CustomFieldsProvider>
+          <PreferencesProvider>
+            <CustomFieldsProvider>
+              <AutoCustomFieldsLoader />
+              {children}
+            </CustomFieldsProvider>
+          </PreferencesProvider>
         </UserDataProvider>
       </body>
     </html>

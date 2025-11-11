@@ -23,9 +23,10 @@ interface BuildingDetailsProps {
   building: BuildingWithUnits
   statusFilter?: UnitStatus | 'all'
   onStatusFilterChange?: (status: UnitStatus | 'all') => void
+  canManage?: boolean
 }
 
-export function BuildingDetails({ building, statusFilter = 'all', onStatusFilterChange }: BuildingDetailsProps) {
+export function BuildingDetails({ building, statusFilter = 'all', onStatusFilterChange, canManage = true }: BuildingDetailsProps) {
   const router = useRouter()
   const [openCreateUnit, setOpenCreateUnit] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -94,25 +95,27 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
               <Building2 className="h-5 w-5 text-primary-600" />
               Informações do Empreendimento
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            {canManage && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditDialogOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,7 +196,9 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
                   <option value="vendido">Unidades vendidas</option>
                 </Select>
               )}
-              <button className="px-3 py-2 text-sm border rounded-md" onClick={() => setOpenCreateUnit(true)}>Nova Unidade</button>
+              {canManage && (
+                <button className="px-3 py-2 text-sm border rounded-md" onClick={() => setOpenCreateUnit(true)}>Nova Unidade</button>
+              )}
             </div>
           </CardTitle>
         </CardHeader>
@@ -233,24 +238,28 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
         </CardContent>
       </Card>
 
-      <UnitCreateDialog open={openCreateUnit} onOpenChange={setOpenCreateUnit} buildingId={currentBuilding.id} />
-      
-      <BuildingEditDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        building={currentBuilding}
-        onUpdated={handleBuildingUpdated}
-      />
+      {canManage && (
+        <>
+          <UnitCreateDialog open={openCreateUnit} onOpenChange={setOpenCreateUnit} buildingId={currentBuilding.id} />
+          
+          <BuildingEditDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            building={currentBuilding}
+            onUpdated={handleBuildingUpdated}
+          />
 
-      <DeleteConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteBuilding}
-        title="Deletar Empreendimento"
-        description={`Tem certeza que deseja deletar o empreendimento "${currentBuilding.name}"?`}
-        itemName={currentBuilding.name}
-        itemType="empreendimento"
-      />
+          <DeleteConfirmationDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={handleDeleteBuilding}
+            title="Deletar Empreendimento"
+            description={`Tem certeza que deseja deletar o empreendimento "${currentBuilding.name}"?`}
+            itemName={currentBuilding.name}
+            itemType="empreendimento"
+          />
+        </>
+      )}
     </div>
   )
 }

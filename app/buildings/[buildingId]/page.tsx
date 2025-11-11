@@ -9,21 +9,27 @@ import { BuildingDetails } from '@/components/BuildingDetails'
 import { buildingService } from '@/lib/services/buildingService'
 import { BuildingWithUnits, UnitStatus } from '@/lib/types/building'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { canManageBuildings as canManageBuildingsPermission, canViewBuildings as canViewBuildingsPermission } from '@/lib/utils/permissions'
 
 export default function BuildingDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const { preferences, loading: preferencesLoading } = usePreferencesContext()
   const [building, setBuilding] = useState<BuildingWithUnits | null>(null)
   const [buildingLoading, setBuildingLoading] = useState(true)
   const [buildingError, setBuildingError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<UnitStatus | 'all'>('all')
   
   const buildingId = params.buildingId as string
+  const userRole = userData?.role ?? 'user'
+  const allowViewBuildings = canViewBuildingsPermission(preferences ?? null, userRole)
+  const allowManageBuildings = canManageBuildingsPermission(preferences ?? null, userRole)
 
   useEffect(() => {
     const fetchBuilding = async () => {
-      if (!userData?.activeLocation || !buildingId) return;
+      if (!userData?.activeLocation || !buildingId || !allowViewBuildings) return;
       
       setBuildingLoading(true);
       setBuildingError(null);
@@ -38,10 +44,12 @@ export default function BuildingDetailPage() {
       }
     };
 
-    fetchBuilding();
-  }, [buildingId, userData?.activeLocation]);
+    if (!preferencesLoading) {
+      fetchBuilding();
+    }
+  }, [buildingId, userData?.activeLocation, allowViewBuildings, preferencesLoading]);
 
-  if (loading || buildingLoading) {
+  if (loading || buildingLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-6xl mx-auto p-6">
@@ -92,6 +100,18 @@ export default function BuildingDetailPage() {
         <div className="text-center">
           <div className="text-yellow-500 text-xl mb-4">⚠️</div>
           <p className="text-neutral-600">Usuário não autenticado</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!allowViewBuildings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Sem permissão para visualizar este empreendimento</h2>
+          <p className="text-neutral-600">Solicite acesso a um administrador.</p>
         </div>
       </div>
     )
@@ -155,7 +175,12 @@ export default function BuildingDetailPage() {
           </div>
 
           {/* Building Details */}
-          <BuildingDetails building={building} statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
+          <BuildingDetails
+            building={building}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            canManage={allowManageBuildings}
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPreferencesByLocationId } from '@/app/api/utils/preferences'
+import { getUserRoleById } from '@/app/api/utils/user'
+import { canManageProposals as canManageProposalsPermission } from '@/lib/utils/permissions'
+import type { UserRole } from '@/lib/types'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -24,6 +28,8 @@ export async function POST(req: NextRequest) {
 		const authHeader = req.headers.get('authorization')
 		let createdBy: string | null = null
 
+		let userRole: UserRole = 'user'
+
 		if (authHeader && anonKey) {
 			const token = authHeader.replace('Bearer ', '')
 			const supabaseClient = createClient(supabaseUrl, anonKey)
@@ -31,7 +37,12 @@ export async function POST(req: NextRequest) {
 			
 			if (!userError && user) {
 				createdBy = user.id
+				userRole = await getUserRoleById(supabaseAdmin, user.id)
 			}
+		}
+
+		if (!createdBy) {
+			return NextResponse.json({ error: 'Usuário não autenticado' }, { status: 401 })
 		}
 
 		const body = await req.json()
@@ -76,6 +87,11 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Missing required fields', missing }, { status: 400 })
 		}
 
+		const preferences = await getPreferencesByLocationId(supabaseAdmin, agencyId)
+		if (!canManageProposalsPermission(preferences, userRole)) {
+			return NextResponse.json({ error: 'Sem permissão para criar propostas' }, { status: 403 })
+		}
+
 		let resolvedUnitId: string | null = null
 		if (unitId) {
 			const { data: verify, error: verifyErr } = await supabaseAdmin
@@ -105,7 +121,6 @@ export async function POST(req: NextRequest) {
 
 		const updateContact = async (c?: { homioId?: string; name: string } | null) => {
 			if (!c || !c.name) return null as string | null
-			console.log('[api/proposals] Updating contact:', { homioId: c.homioId, name: c.name })
 			
 			// Se não temos homioId, buscar por nome para evitar duplicatas
 			const searchKey = c.homioId || c.name
@@ -128,7 +143,6 @@ export async function POST(req: NextRequest) {
 				.select('id')
 				.single()
 			if (insertErr || !inserted) {
-				console.log('[api/proposals] Contact insert error:', insertErr)
 				throw insertErr || new Error('Failed to update contact')
 			}
 			return inserted.id as string

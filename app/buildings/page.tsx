@@ -10,9 +10,12 @@ import { BuildingFilters, BuildingListItem } from "@/lib/types/building";
 import { buildingService } from "@/lib/services/buildingService";
 import { Plus, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
+import { usePreferencesContext } from "@/lib/contexts/PreferencesContext";
+import { canManageBuildings as canManageBuildingsPermission, canViewBuildings as canViewBuildingsPermission } from "@/lib/utils/permissions";
 
 export default function BuildingsPage() {
   const { userData, loading, error } = useUserDataContext();
+  const { preferences, loading: preferencesLoading } = usePreferencesContext();
   const [buildings, setBuildings] = useState<BuildingListItem[]>([]);
   const [buildingsLoading, setBuildingsLoading] = useState(true);
   const [buildingsError, setBuildingsError] = useState<string | null>(null);
@@ -23,9 +26,17 @@ export default function BuildingsPage() {
   });
   const [selectedBuildings, setSelectedBuildings] = useState<string[]>([]);
 
+  const userRole = userData?.role ?? 'user';
+  const allowViewBuildings = canViewBuildingsPermission(preferences ?? null, userRole);
+  const allowManageBuildings = canManageBuildingsPermission(preferences ?? null, userRole);
+
   useEffect(() => {
     const fetchBuildings = async () => {
-      if (!userData?.activeLocation) return;
+      if (!userData?.activeLocation || !allowViewBuildings) {
+        setBuildings([]);
+        setBuildingsLoading(false);
+        return;
+      }
       
       setBuildingsLoading(true);
       setBuildingsError(null);
@@ -40,8 +51,10 @@ export default function BuildingsPage() {
       }
     };
 
-    fetchBuildings();
-  }, [userData?.activeLocation]);
+    if (!preferencesLoading) {
+      fetchBuildings();
+    }
+  }, [userData?.activeLocation, allowViewBuildings, preferencesLoading]);
 
   const filteredBuildings = useMemo(() => {
     return buildings
@@ -77,6 +90,7 @@ export default function BuildingsPage() {
 
   const handleSelectBuilding = (id: string, selected: boolean) => {
     if (selected) {
+      if (!allowManageBuildings) return;
       setSelectedBuildings(prev => [...prev, id]);
     } else {
       setSelectedBuildings(prev => prev.filter(buildingId => buildingId !== id));
@@ -84,6 +98,7 @@ export default function BuildingsPage() {
   };
 
   const handleSelectAll = () => {
+    if (!allowManageBuildings) return;
     if (selectedBuildings.length === filteredBuildings.length) {
       setSelectedBuildings([]);
     } else {
@@ -92,12 +107,13 @@ export default function BuildingsPage() {
   };
 
   const handleBulkDelete = () => {
+    if (!allowManageBuildings) return;
     if (selectedBuildings.length > 0) {
       setSelectedBuildings([]);
     }
   };
 
-  if (loading || buildingsLoading) {
+  if (loading || buildingsLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="flex min-w-0">
@@ -199,6 +215,18 @@ export default function BuildingsPage() {
     );
   }
 
+  if (!allowViewBuildings && !preferencesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Sem permissão para visualizar empreendimentos</h2>
+          <p className="text-neutral-600">Solicite acesso a um administrador.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="flex min-w-0">
@@ -216,21 +244,25 @@ export default function BuildingsPage() {
               <p className="text-neutral-600">Gerencie seus empreendimentos e unidades</p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/buildings/create">
-                <Button variant="default">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Empreendimento
-                </Button>
-              </Link>
-              <Link href="/config">
-                <Button variant="outline" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
+              {allowManageBuildings && (
+                <Link href="/buildings/create">
+                  <Button variant="default">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Empreendimento
+                  </Button>
+                </Link>
+              )}
+              {userRole === 'admin' && (
+                <Link href="/config">
+                  <Button variant="outline" size="icon">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
 
-          {selectedBuildings.length > 0 && (
+          {allowManageBuildings && selectedBuildings.length > 0 && (
             <div className="flex items-center justify-end mb-6">
               <Button
                 variant="destructive"
@@ -248,6 +280,7 @@ export default function BuildingsPage() {
             selectedBuildings={selectedBuildings}
             onSelectBuilding={handleSelectBuilding}
             onSelectAll={handleSelectAll}
+            canManage={allowManageBuildings}
           />
 
           <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">

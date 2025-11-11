@@ -25,9 +25,10 @@ interface UnitWithBuilding extends Unit {
 
 interface UnitDetailsProps {
   unitWithBuilding: UnitWithBuilding
+  canManage?: boolean
 }
 
-export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
+export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsProps) {
   const router = useRouter()
   const unit = unitWithBuilding
   const building = unitWithBuilding.building
@@ -52,12 +53,13 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
   }
 
   const handleDeleteUnit = async () => {
+    if (!canManage) return
     await buildingService.deleteUnit(currentUnit.id)
     router.push(`/buildings/${building.id}`)
   }
 
   const handleStatusChange = async (newStatus: UnitStatus) => {
-    if (newStatus === currentUnit.status || statusUpdating) return
+    if (!canManage || newStatus === currentUnit.status || statusUpdating) return
 
     setStatusUpdating(true)
     const previousStatus = currentUnit.status
@@ -93,25 +95,27 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
               <Home className="h-5 w-5 text-primary-600" />
               Informações da Unidade
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditDialogOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+            {canManage && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditDialogOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -130,7 +134,7 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
                 <Select
                   value={currentUnit.status}
                   onChange={(e) => handleStatusChange(e.target.value as UnitStatus)}
-                  disabled={statusUpdating}
+                  disabled={statusUpdating || !canManage}
                   className="w-32"
                 >
                   <option value="livre">Livre</option>
@@ -188,22 +192,26 @@ export function UnitDetails({ unitWithBuilding }: UnitDetailsProps) {
         </CardContent>
       </Card>
 
-      <UnitEditDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        unit={currentUnit}
-        onUpdated={handleUnitUpdated}
-      />
+      {canManage && (
+        <>
+          <UnitEditDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            unit={currentUnit}
+            onUpdated={handleUnitUpdated}
+          />
 
-      <DeleteConfirmationDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteUnit}
-        title="Deletar Unidade"
-        description={`Tem certeza que deseja deletar a unidade "${currentUnit.name || currentUnit.number}"?`}
-        itemName={currentUnit.name || `Unidade ${currentUnit.number}`}
-        itemType="unidade"
-      />
+          <DeleteConfirmationDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={handleDeleteUnit}
+            title="Deletar Unidade"
+            description={`Tem certeza que deseja deletar a unidade "${currentUnit.name || currentUnit.number}"?`}
+            itemName={currentUnit.name || `Unidade ${currentUnit.number}`}
+            itemType="unidade"
+          />
+        </>
+      )}
 
       <Dialog open={webhookErrorDialogOpen} onOpenChange={setWebhookErrorDialogOpen}>
         <DialogContent>

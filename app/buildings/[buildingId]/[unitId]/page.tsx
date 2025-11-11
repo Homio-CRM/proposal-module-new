@@ -12,11 +12,14 @@ import { dataService } from '@/lib/services/dataService'
 import { buildingService } from '@/lib/services/buildingService'
 import { BuildingWithUnits } from '@/lib/types/building'
 import { ArrowLeft, AlertCircle } from 'lucide-react'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { canManageBuildings as canManageBuildingsPermission, canManageProposals as canManageProposalsPermission, canViewBuildings as canViewBuildingsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from '@/lib/utils/permissions'
 
 export default function UnitDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const { preferences, loading: preferencesLoading } = usePreferencesContext()
   const [building, setBuilding] = useState<BuildingWithUnits | null>(null)
   const [buildingLoading, setBuildingLoading] = useState(true)
   const [buildingError, setBuildingError] = useState<string | null>(null)
@@ -25,10 +28,16 @@ export default function UnitDetailPage() {
   
   const buildingId = params.buildingId as string
   const unitId = params.unitId as string
+  const userRole = userData?.role ?? 'user'
+  const allowViewBuildings = canViewBuildingsPermission(preferences ?? null, userRole)
+  const allowManageBuildings = canManageBuildingsPermission(preferences ?? null, userRole)
+  const allowViewProposals = canViewProposalsPermission(preferences ?? null, userRole)
+  const allowManageProposals = canManageProposalsPermission(preferences ?? null, userRole)
+  const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userRole) && userData?.userId ? userData.userId : undefined
 
   useEffect(() => {
     const fetchBuilding = async () => {
-      if (!userData?.activeLocation || !buildingId) return;
+      if (!userData?.activeLocation || !buildingId || !allowViewBuildings) return;
       
       setBuildingLoading(true);
       setBuildingError(null);
@@ -43,23 +52,30 @@ export default function UnitDetailPage() {
       }
     };
 
-    fetchBuilding();
-  }, [buildingId, userData?.activeLocation]);
+    if (!preferencesLoading) {
+      fetchBuilding();
+    }
+  }, [buildingId, userData?.activeLocation, allowViewBuildings, preferencesLoading]);
 
   useEffect(() => {
     const fetchProposals = async () => {
-      if (!unitId) return
+      if (!unitId || !allowViewProposals) return
       setUnitProposalsLoading(true)
       try {
-        const proposals = await dataService.fetchProposalsByUnit(unitId)
+        const proposals = await dataService.fetchProposalsByUnit(
+          unitId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
         setUnitProposals(proposals)
       } catch {
       } finally {
         setUnitProposalsLoading(false)
       }
     }
-    fetchProposals()
-  }, [unitId])
+    if (!preferencesLoading) {
+      fetchProposals()
+    }
+  }, [unitId, restrictToCreator, allowViewProposals, preferencesLoading])
   
   const unit = building?.units.find(u => u.id === unitId)
   
@@ -68,7 +84,7 @@ export default function UnitDetailPage() {
     building
   } : null
 
-  if (loading || buildingLoading) {
+  if (loading || buildingLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-6xl mx-auto p-6">
@@ -114,6 +130,18 @@ export default function UnitDetailPage() {
   }
 
   if (!userData) {
+  if (!allowViewBuildings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Sem permissão para visualizar esta unidade</h2>
+          <p className="text-neutral-600">Solicite acesso a um administrador.</p>
+        </div>
+      </div>
+    )
+  }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -182,30 +210,35 @@ export default function UnitDetailPage() {
           </div>
 
           {/* Unit Details */}
-          <UnitDetails unitWithBuilding={unitWithBuilding} />
+          <UnitDetails unitWithBuilding={unitWithBuilding} canManage={allowManageBuildings} />
 
           {/* Proposals for this Unit */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-900">Propostas desta unidade</h2>
-            {unitProposalsLoading ? (
+            {allowViewProposals ? (
+              unitProposalsLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-5 w-40" />
                 <Skeleton className="h-24 w-full" />
               </div>
-            ) : unitProposals.length === 0 ? (
+              ) : unitProposals.length === 0 ? (
               <p className="text-gray-600">Nenhuma proposta para esta unidade.</p>
+              ) : (
+                <ProposalTable
+                  proposals={unitProposals}
+                  onCopy={() => {}}
+                  onDelete={() => {}}
+                  onView={() => {}}
+                  selectedProposals={[]}
+                  onSelectProposal={() => {}}
+                  onSelectAll={() => {}}
+                  onBulkDelete={() => {}}
+                  showUnitColumn={false}
+                  canManage={allowManageProposals}
+                />
+              )
             ) : (
-              <ProposalTable
-                proposals={unitProposals}
-                onCopy={() => {}}
-                onDelete={() => {}}
-                onView={() => {}}
-                selectedProposals={[]}
-                onSelectProposal={() => {}}
-                onSelectAll={() => {}}
-                onBulkDelete={() => {}}
-                showUnitColumn={false}
-              />
+              <p className="text-gray-600">Você não tem permissão para visualizar propostas desta unidade.</p>
             )}
           </div>
         </div>

@@ -54,16 +54,20 @@ export interface ProfileWithProposals {
 }
 
 class DataService {
-  async fetchProposalsByUnit(unitId: string): Promise<ProposalListItem[]> {
+  async fetchProposalsByUnit(
+    unitId: string,
+    options: { restrictToUserId?: string } = {}
+  ): Promise<ProposalListItem[]> {
     try {
       const supabase = await getSupabase()
 
-      const { data, error } = await supabase
+      const query = supabase
         .from('proposals')
         .select(`
           id,
           name,
           opportunity_id,
+          created_by,
           status,
           proposal_date,
           primary_contact:contacts!proposals_primary_contact_id_fkey(name),
@@ -71,6 +75,12 @@ class DataService {
           installments:installments(total_amount)
         `)
         .eq('unit_id', unitId)
+
+      if (options.restrictToUserId) {
+        query.eq('created_by', options.restrictToUserId)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw new Error(`Erro ao buscar propostas da unidade: ${error.message}`)
@@ -81,6 +91,7 @@ class DataService {
         id: string
         name?: string | null
         opportunity_id?: string | null
+        created_by?: string | null
         status: string
         proposal_date: string
         primary_contact?: { name?: string | null } | null
@@ -102,17 +113,28 @@ class DataService {
           status: this.mapProposalStatus(item.status),
           proposalDate: item.proposal_date,
           price: totalAmount,
-          assignedAgent: 'Sistema'
+          assignedAgent: 'Sistema',
+          createdBy: item.created_by || undefined
         }
       })
 
-      return proposals
+      let result = proposals
+      if (options.restrictToUserId) {
+        result = proposals.filter(p => p.createdBy === options.restrictToUserId)
+      }
+
+      return result
     } catch {
       return []
     }
   }
-  async fetchProposalsData(agencyId: string): Promise<ProposalListItem[]> {
-    const cacheKey = `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}`
+  async fetchProposalsData(
+    agencyId: string,
+    options: { restrictToUserId?: string } = {}
+  ): Promise<ProposalListItem[]> {
+    const cacheKey = options.restrictToUserId
+      ? `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}_${options.restrictToUserId}`
+      : `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}`
     
     const cachedData = userCache.get<ProposalListItem[]>(cacheKey)
     if (cachedData) {
@@ -122,10 +144,16 @@ class DataService {
     try {
       const supabase = await getSupabase()
       
-      const { data, error } = await supabase
+      const query = supabase
         .from('proposals_match')
         .select('*')
         .order('proposal_date', { ascending: false })
+
+      if (options.restrictToUserId) {
+        query.eq('created_by', options.restrictToUserId)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw new Error(`Erro ao buscar propostas: ${error.message}`)
@@ -204,12 +232,15 @@ class DataService {
     }
   }
 
-  async fetchProposalDetails(proposalId: string): Promise<{ proposalFormData: ProposalFormData; createdByName: string | null } | null> {
+  async fetchProposalDetails(
+    proposalId: string,
+    options: { restrictToUserId?: string } = {}
+  ): Promise<{ proposalFormData: ProposalFormData; createdByName: string | null } | null> {
     try {
       const supabase = await getSupabase()
       
       // Buscar proposta com contatos, unidade e profile criador
-      const { data: proposalData, error: proposalError } = await supabase
+      const query = supabase
         .from('proposals')
         .select(`
           *,
@@ -219,7 +250,12 @@ class DataService {
           created_by_profile:profiles!proposals_created_by_fkey(id, name)
         `)
         .eq('id', proposalId)
-        .single()
+
+      if (options.restrictToUserId) {
+        query.eq('created_by', options.restrictToUserId)
+      }
+
+      const { data: proposalData, error: proposalError } = await query.single()
 
       if (proposalError) {
         if (proposalError.code === 'PGRST116') {
@@ -347,9 +383,13 @@ class DataService {
     }
   }
 
-  clearProposalsCache(agencyId: string): void {
-    const cacheKey = `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}`
-    userCache.delete(cacheKey)
+  clearProposalsCache(agencyId: string, options: { restrictToUserId?: string } = {}): void {
+    const defaultKey = `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}`
+    userCache.delete(defaultKey)
+    if (options.restrictToUserId) {
+      const userKey = `${CACHE_KEYS.LISTINGS}_proposals_${agencyId}_${options.restrictToUserId}`
+      userCache.delete(userKey)
+    }
   }
 
   clearAgencyConfigCache(locationId: string): void {
@@ -392,9 +432,25 @@ class DataService {
     }
   }
 
-  async deleteProposal(proposalId: string): Promise<void> {
+  async deleteProposal(proposalId: string, options: { restrictToUserId?: string } = {}): Promise<void> {
     try {
       const supabase = await getSupabase()
+
+      if (options.restrictToUserId) {
+        const { data: ownerCheck, error: ownerError } = await supabase
+          .from('proposals')
+          .select('created_by')
+          .eq('id', proposalId)
+          .single()
+
+        if (ownerError) {
+          throw new Error(`Erro ao verificar proprietário da proposta: ${ownerError.message}`)
+        }
+
+        if (ownerCheck?.created_by && ownerCheck.created_by !== options.restrictToUserId) {
+          throw new Error('Sem permissão para deletar esta proposta')
+        }
+      }
       
       // 1. Delete installments first
       const { error: installmentsError } = await supabase

@@ -38,6 +38,8 @@ import PropertyDataStep from './steps/PropertyDataStep'
 import PaymentInstallmentsStep from './steps/PaymentInstallmentsStep'
 import SummaryStep from './steps/SummaryStep'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { restrictProposalsToCreator, canManageProposals as canManageProposalsPermission } from '@/lib/utils/permissions'
 
 const FORM_STEPS: ProposalFormStep[] = [
   {
@@ -90,9 +92,14 @@ interface ProposalFormProps {
 export default function ProposalForm({ initialData, proposalId }: ProposalFormProps) {
   const { userData, loading } = useUserDataContext()
   const { customFieldIds } = useCustomFieldsContext()
+  const { preferences } = usePreferencesContext()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userData?.role ?? 'user') && userData?.userId
+    ? userData.userId
+    : undefined
+  const allowManageProposals = canManageProposalsPermission(preferences ?? null, userData?.role ?? 'user')
   const initialProposal: ProposalData = {
     opportunityId: '',
     proposalDate: '',
@@ -536,12 +543,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
     return (primaryComplete && !additionalAny) || additionalComplete
   }, [formData.additionalContact, isStepValid])
 
-  useEffect(() => {
-    if (userData && userData.role !== 'admin') {
-      setCurrentStep(0)
-    }
-  }, [userData])
-
   const needsPrimaryContactFetch = useMemo(() => {
     return !!(initialData?.primaryContact.homioId && 
       (!initialData.primaryContact.cpf || !initialData.primaryContact.email || !initialData.primaryContact.phone))
@@ -937,7 +938,10 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         return
       }
       if (userData?.companyId) {
-        dataService.clearProposalsCache(userData.companyId)
+        dataService.clearProposalsCache(
+          userData.companyId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
       }
       setShowSuccessModal(true)
     } catch {
@@ -1204,7 +1208,7 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
     )
   }
 
-  if (!userData || userData.role !== 'admin') {
+  if (!userData || !allowManageProposals) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <Card>

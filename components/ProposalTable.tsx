@@ -18,6 +18,7 @@ interface ProposalTableProps {
   onSelectAll: () => void
   onBulkDelete: () => void
   showUnitColumn?: boolean
+  canManage?: boolean
 }
 
 export function ProposalTable({ 
@@ -29,7 +30,8 @@ export function ProposalTable({
   onSelectProposal, 
   onSelectAll, 
   onBulkDelete,
-  showUnitColumn = true
+  showUnitColumn = true,
+  canManage = true
 }: ProposalTableProps) {
   const router = useRouter()
   const formatDate = (dateString: string) => {
@@ -47,7 +49,7 @@ export function ProposalTable({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      {selectedProposals.length > 0 && (
+      {canManage && selectedProposals.length > 0 && (
         <div className="flex justify-end p-3 border-b border-gray-200">
           <Button
             variant="destructive"
@@ -64,13 +66,15 @@ export function ProposalTable({
         <table className="w-full min-w-[900px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-                <Checkbox
-                  checked={proposals.length > 0 && proposals.every(proposal => selectedProposals.includes(proposal.id))}
-                  onCheckedChange={onSelectAll}
-                  aria-label="Selecionar todos"
-                />
-              </th>
+              {canManage && (
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                  <Checkbox
+                    checked={proposals.length > 0 && proposals.every(proposal => selectedProposals.includes(proposal.id))}
+                    onCheckedChange={onSelectAll}
+                    aria-label="Selecionar todos"
+                  />
+                </th>
+              )}
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]">
                 Título
               </th>
@@ -91,9 +95,11 @@ export function ProposalTable({
               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Valor Total
               </th>
-              <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                Ações
-              </th>
+              {canManage && (
+                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -108,16 +114,18 @@ export function ProposalTable({
                   router.push(`/proposals/${proposal.id}`)
                 }}
               >
-                <td className="px-2 py-3 whitespace-nowrap w-10">
-                  <Checkbox
-                    checked={selectedProposals.includes(proposal.id)}
-                    onCheckedChange={(checked) => {
-                      onSelectProposal(proposal.id, checked as boolean)
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Selecionar ${proposal.title}`}
-                  />
-                </td>
+                {canManage && (
+                  <td className="px-2 py-3 whitespace-nowrap w-10">
+                    <Checkbox
+                      checked={selectedProposals.includes(proposal.id)}
+                      onCheckedChange={(checked) => {
+                        onSelectProposal(proposal.id, checked as boolean)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Selecionar ${proposal.title}`}
+                    />
+                  </td>
+                )}
                 <td className="px-2 py-3 whitespace-nowrap min-w-[180px]">
                   <div className="text-sm font-medium text-neutral-900 group-hover:text-primary-600 transition-colors duration-150">
                     {proposal.title}
@@ -148,32 +156,34 @@ export function ProposalTable({
                 <td className="px-2 py-3 whitespace-nowrap text-sm text-neutral-900 min-w-[100px]">
                   {formatPrice(proposal.price)}
                 </td>
-                <td className="px-2 py-3 whitespace-nowrap text-center w-24">
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onCopy(proposal.id)
-                      }}
-                      className="h-7 w-7 p-0 border-transparent hover:bg-primary-50 hover:border-primary-300"
-                    >
-                      <Copy className="h-3 w-3 text-primary-600" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(proposal.id)
-                      }}
-                      className="h-7 w-7 p-0 border-transparent hover:bg-red-50 hover:border-red-300"
-                    >
-                      <Trash2 className="h-3 w-3 text-red-600" />
-                    </Button>
-                  </div>
-                </td>
+                {canManage && (
+                  <td className="px-2 py-3 whitespace-nowrap text-center w-24">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onCopy(proposal.id)
+                        }}
+                        className="h-7 w-7 p-0 border-transparent hover:bg-primary-50 hover:border-primary-300"
+                      >
+                        <Copy className="h-3 w-3 text-primary-600" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDelete(proposal.id)
+                        }}
+                        className="h-7 w-7 p-0 border-transparent hover:bg-red-50 hover:border-red-300"
+                      >
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

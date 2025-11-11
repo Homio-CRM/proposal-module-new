@@ -18,7 +18,9 @@ export default function useUserData(): UseUserDataReturn {
 
     const fetchInitialData = async (userData: UserData) => {
         try {
-            await dataService.fetchProposalsData(userData.companyId)
+            if (userData.role === 'admin') {
+                await dataService.fetchProposalsData(userData.companyId)
+            }
             await dataService.fetchAgencyConfig(userData.activeLocation)
         } catch (error) {
             console.error('Erro ao buscar dados iniciais:', error)

@@ -9,11 +9,14 @@ import { dataService } from '@/lib/services/dataService'
 import { ProposalFormData } from '@/lib/types/proposal'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { canManageProposals as canManageProposalsPermission, restrictProposalsToCreator } from '@/lib/utils/permissions'
 
 export default function EditProposalPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
+  const { preferences, loading: preferencesLoading } = usePreferencesContext()
   
   const proposalId = params.id as string
   const [proposalDetails, setProposalDetails] = useState<ProposalFormData | null>(null)
@@ -28,7 +31,14 @@ export default function EditProposalPage() {
         setProposalLoading(true)
         setProposalError(null)
 
-        const result = await dataService.fetchProposalDetails(proposalId)
+        const restrictToCreator = userData?.role
+          ? (restrictProposalsToCreator(preferences ?? null, userData.role) ? userData.userId : undefined)
+          : undefined
+
+        const result = await dataService.fetchProposalDetails(
+          proposalId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
         if (!result) {
           setProposalError('Detalhes da proposta não encontrados')
           return
@@ -43,12 +53,12 @@ export default function EditProposalPage() {
       }
     }
 
-    if (userData && !loading) {
+    if (userData && !loading && !preferencesLoading) {
       loadProposalData()
     }
-  }, [userData, loading, proposalId])
+  }, [userData, loading, preferencesLoading, proposalId, preferences])
 
-  if (loading || proposalLoading) {
+  if (loading || proposalLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-7xl mx-auto p-6">
@@ -88,6 +98,27 @@ export default function EditProposalPage() {
         <div className="text-center">
           <div className="text-yellow-500 text-xl mb-4">⚠️</div>
           <p className="text-neutral-600">Usuário não autenticado</p>
+        </div>
+      </div>
+    )
+  }
+
+  const allowManageProposals = canManageProposalsPermission(preferences ?? null, userData.role)
+
+  if (!allowManageProposals) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Sem permissão para editar propostas</h2>
+          <p className="text-neutral-600">Solicite acesso a um administrador.</p>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/proposals')}
+            className="mt-4"
+          >
+            Voltar para Propostas
+          </Button>
         </div>
       </div>
     )

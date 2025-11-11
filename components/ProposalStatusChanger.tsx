@@ -17,6 +17,7 @@ interface ProposalStatusChangerProps {
   currentStatus: ProposalStatus
   unitId?: string
   onStatusChange: (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => Promise<void>
+  disabled?: boolean
 }
 
 const statusOptions: { value: ProposalStatus; label: string; icon: typeof CheckCircle; color: string }[] = [
@@ -25,7 +26,7 @@ const statusOptions: { value: ProposalStatus; label: string; icon: typeof CheckC
   { value: 'negada', label: 'Negada', icon: XCircle, color: 'text-red-600' }
 ]
 
-export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onStatusChange }: ProposalStatusChangerProps) {
+export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onStatusChange, disabled = false }: ProposalStatusChangerProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<ProposalStatus | null>(null)
@@ -33,7 +34,7 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
   const [reservedUntil, setReservedUntil] = useState<Date | null>(null)
 
   const handleStatusChange = async (newStatus: ProposalStatus) => {
-    if (newStatus === currentStatus || isUpdating) return
+    if (newStatus === currentStatus || isUpdating || disabled) return
 
     if ((newStatus === 'aprovada' || newStatus === 'negada') && unitId) {
       setPendingStatus(newStatus)
@@ -66,7 +67,7 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
   }
 
   const handleConfirmStatusChange = async () => {
-    if (!pendingStatus) return
+    if (!pendingStatus || disabled) return
 
     if (pendingStatus === 'em_analise' && updateUnitStatus) {
       if (!reservedUntil) {
@@ -170,7 +171,7 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
                 {statusOptions.map((option) => {
                   const Icon = option.icon
                   const isActive = currentStatus === option.value
-                  const isDisabled = isUpdating || isActive
+                  const isDisabled = isUpdating || isActive || disabled
 
                   return (
                     <Button
@@ -208,11 +209,12 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
           </DialogHeader>
           {unitId && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2">
                 <Checkbox
                   id="update-unit-status"
                   checked={updateUnitStatus}
-                  onCheckedChange={(checked) => setUpdateUnitStatus(checked === true)}
+                      onCheckedChange={(checked) => setUpdateUnitStatus(checked === true)}
+                      disabled={disabled}
                 />
                 <label
                   htmlFor="update-unit-status"
@@ -241,10 +243,10 @@ export function ProposalStatusChanger({ proposalId, currentStatus, unitId, onSta
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancelConfirm}>
+              <Button variant="outline" onClick={handleCancelConfirm}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmStatusChange}>
+            <Button onClick={handleConfirmStatusChange} disabled={disabled}>
               Confirmar
             </Button>
           </DialogFooter>

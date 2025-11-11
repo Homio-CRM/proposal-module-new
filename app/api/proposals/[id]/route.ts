@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getPreferencesByLocationId } from '@/app/api/utils/preferences'
+import { getUserRoleById } from '@/app/api/utils/user'
+import { canManageProposals as canManageProposalsPermission, restrictProposalsToCreator } from '@/lib/utils/permissions'
+import type { UserRole } from '@/lib/types'
 
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const anonKey = process.env.SUPABASE_ANON_KEY || ''
 
 const supabaseAdmin = createClient(
 	supabaseUrl,
@@ -15,6 +20,24 @@ export async function PUT(
 	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
+		const authHeader = req.headers.get('authorization')
+		let userRole: UserRole = 'user'
+		let requestUserId: string | null = null
+
+		if (authHeader && anonKey) {
+			const token = authHeader.replace('Bearer ', '')
+			const supabaseClient = createClient(supabaseUrl, anonKey)
+			const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+			if (!userError && user) {
+				requestUserId = user.id
+				userRole = await getUserRoleById(supabaseAdmin, user.id)
+			}
+		}
+
+		if (!requestUserId) {
+			return NextResponse.json({ error: 'Usuário não autenticado' }, { status: 401 })
+		}
+
 		const { id } = await params
 		const proposalId = id
 		const body = await req.json()
@@ -61,12 +84,21 @@ export async function PUT(
 
 		const { data: proposalCheck } = await supabaseAdmin
 			.from('proposals')
-			.select('agency_id')
+			.select('agency_id, created_by')
 			.eq('id', proposalId)
 			.single()
 
 		if (!proposalCheck) {
 			return NextResponse.json({ error: 'Proposta não encontrada' }, { status: 404 })
+		}
+
+		const preferences = await getPreferencesByLocationId(supabaseAdmin, proposalCheck.agency_id)
+		if (!canManageProposalsPermission(preferences, userRole)) {
+			return NextResponse.json({ error: 'Sem permissão para atualizar propostas' }, { status: 403 })
+		}
+
+		if (restrictProposalsToCreator(preferences, userRole) && proposalCheck.created_by && proposalCheck.created_by !== requestUserId) {
+			return NextResponse.json({ error: 'Sem permissão para editar esta proposta' }, { status: 403 })
 		}
 
 		const { data: verifyUnit } = await supabaseAdmin

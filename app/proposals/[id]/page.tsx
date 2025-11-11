@@ -13,12 +13,15 @@ import { dataService } from '@/lib/services/dataService'
 import { ProposalFormData, ProposalListItem, ProposalStatus } from '@/lib/types/proposal'
 import { clearContactCache } from '@/hooks/useContactData'
 import { ArrowLeft, AlertCircle, Edit } from 'lucide-react'
+import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
+import { canManageProposals as canManageProposalsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from '@/lib/utils/permissions'
 
 export default function ProposalDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
   const { customFieldIds, setCustomFieldIds } = useCustomFieldsContext()
+  const { preferences, loading: preferencesLoading } = usePreferencesContext()
   const ensureOpportunityCustomFieldMap = async () => {
     if (Object.keys(customFieldIds.opportunityFields).length > 0) {
       return customFieldIds.opportunityFields
@@ -46,8 +49,15 @@ export default function ProposalDetailPage() {
   const [proposalLoading, setProposalLoading] = useState(true)
   const [proposalError, setProposalError] = useState<string | null>(null)
   const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
+  const userRole = userData?.role ?? 'user'
+  const allowViewProposals = canViewProposalsPermission(preferences ?? null, userRole)
+  const allowManageProposals = canManageProposalsPermission(preferences ?? null, userRole)
+  const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userRole) ? userData?.userId : undefined
   
   const handleStatusChange = async (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => {
+    if (!allowManageProposals) {
+      throw new Error('Sem permissão para atualizar esta proposta')
+    }
     const buildOpportunityCustomFields = (
       details: ProposalFormData,
       fieldMap: Record<string, string>,
@@ -106,7 +116,10 @@ export default function ProposalDetailPage() {
       const responseData = await response.json().catch(() => null)
       
       if (userData?.companyId) {
-        dataService.clearProposalsCache(userData.companyId)
+        dataService.clearProposalsCache(
+          userData.companyId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
       }
 
       setProposal(prev => {
@@ -185,14 +198,17 @@ export default function ProposalDetailPage() {
 
   useEffect(() => {
     const loadProposalData = async () => {
-      if (!userData?.companyId || !proposalId) return
+      if (!userData?.companyId || !proposalId || !allowViewProposals) return
 
       try {
         setProposalLoading(true)
         setProposalError(null)
 
         // Buscar lista de propostas para obter dados básicos
-        const proposalsData = await dataService.fetchProposalsData(userData.companyId)
+        const proposalsData = await dataService.fetchProposalsData(
+          userData.companyId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
         const foundProposal = proposalsData.find(p => p.id === proposalId)
         
         if (!foundProposal) {
@@ -203,7 +219,10 @@ export default function ProposalDetailPage() {
         setProposal(foundProposal)
 
         // Buscar detalhes completos da proposta
-        const result = await dataService.fetchProposalDetails(proposalId)
+        const result = await dataService.fetchProposalDetails(
+          proposalId,
+          restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+        )
         if (!result) {
           setProposalError('Detalhes da proposta não encontrados')
           return
@@ -229,12 +248,12 @@ export default function ProposalDetailPage() {
       }
     }
 
-    if (userData && !loading) {
+    if (userData && !loading && !preferencesLoading) {
       loadProposalData()
     }
-  }, [userData, loading, proposalId])
+  }, [userData, loading, preferencesLoading, proposalId, allowViewProposals, restrictToCreator])
 
-  if (loading || proposalLoading) {
+  if (loading || proposalLoading || preferencesLoading) {
     return (
       <div className="min-h-screen bg-white">
         <div className="max-w-6xl mx-auto p-6">
@@ -269,6 +288,18 @@ export default function ProposalDetailPage() {
   }
 
   if (!userData) {
+  if (!allowViewProposals) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Sem permissão para visualizar esta proposta</h2>
+          <p className="text-neutral-600">Solicite acesso a um administrador se precisar ver esta proposta.</p>
+        </div>
+      </div>
+    )
+  }
+
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -334,14 +365,16 @@ export default function ProposalDetailPage() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="default"
-              onClick={() => router.push(`/proposals/${proposalId}/edit`)}
-              className="flex items-center gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              Editar Proposta
-            </Button>
+            {allowManageProposals && (
+              <Button
+                variant="default"
+                onClick={() => router.push(`/proposals/${proposalId}/edit`)}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Editar Proposta
+              </Button>
+            )}
           </div>
 
           {/* Status Changer */}
@@ -350,6 +383,7 @@ export default function ProposalDetailPage() {
             currentStatus={proposal.status}
             unitId={proposalDetails.property.unitId}
             onStatusChange={handleStatusChange}
+            disabled={!allowManageProposals}
           />
 
           {/* Proposal Details */}
