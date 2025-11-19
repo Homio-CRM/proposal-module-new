@@ -15,6 +15,7 @@ import { clearContactCache } from '@/hooks/useContactData'
 import { ArrowLeft, AlertCircle, Edit } from 'lucide-react'
 import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
 import { canManageProposals as canManageProposalsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from '@/lib/utils/permissions'
+import { getSupabase } from '@/lib/supabaseClient'
 
 export default function ProposalDetailPage() {
   const params = useParams()
@@ -55,6 +56,9 @@ export default function ProposalDetailPage() {
   const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userRole) ? userData?.userId : undefined
   
   const handleStatusChange = async (newStatus: ProposalStatus, updateUnitStatus?: boolean, reservedUntil?: string) => {
+    if (userData?.role !== 'admin') {
+      throw new Error('Apenas administradores podem alterar o status da proposta')
+    }
     if (!allowManageProposals) {
       throw new Error('Sem permissão para atualizar esta proposta')
     }
@@ -90,9 +94,18 @@ export default function ProposalDetailPage() {
 
     try {
       const opportunityFieldMap = await ensureOpportunityCustomFieldMap()
+      
+      const supabase = await getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (session?.access_token) {
+        headers['authorization'] = `Bearer ${session.access_token}`
+      }
+      
       const response = await fetch(`/api/proposals/${proposalId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ 
           status: newStatus,
           updateUnitStatus: updateUnitStatus === true,
@@ -377,14 +390,16 @@ export default function ProposalDetailPage() {
             )}
           </div>
 
-          {/* Status Changer */}
-          <ProposalStatusChanger
-            proposalId={proposalId}
-            currentStatus={proposal.status}
-            unitId={proposalDetails.property.unitId}
-            onStatusChange={handleStatusChange}
-            disabled={!allowManageProposals}
-          />
+          {/* Status Changer - Apenas para admins */}
+          {userData?.role === 'admin' && (
+            <ProposalStatusChanger
+              proposalId={proposalId}
+              currentStatus={proposal.status}
+              unitId={proposalDetails.property.unitId}
+              onStatusChange={handleStatusChange}
+              disabled={!allowManageProposals}
+            />
+          )}
 
           {/* Proposal Details */}
           <ProposalDetails data={proposalDetails} locationId={userData.activeLocation} />

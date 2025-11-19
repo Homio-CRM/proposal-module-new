@@ -230,14 +230,14 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         if (!formData.primaryContact.rg.trim()) {
           errors['primaryContact.rg'] = 'RG é obrigatório'
         }
+        if (!formData.primaryContact.rgIssuer.trim()) {
+          errors['primaryContact.rgIssuer'] = 'Órgão emissor do RG é obrigatório'
+        }
         if (!formData.primaryContact.nationality) {
           errors['primaryContact.nationality'] = 'Nacionalidade é obrigatória'
         }
         if (!formData.primaryContact.maritalStatus) {
           errors['primaryContact.maritalStatus'] = 'Estado civil é obrigatório'
-        }
-        if (!formData.primaryContact.birthDate) {
-          errors['primaryContact.birthDate'] = 'Data de nascimento é obrigatória'
         }
         if (!formData.primaryContact.email.trim()) {
           errors['primaryContact.email'] = 'E-mail é obrigatório'
@@ -329,9 +329,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
             }
             if (!additionalContact.maritalStatus) {
               errors['additionalContact.maritalStatus'] = 'Estado civil é obrigatório'
-            }
-            if (!additionalContact.birthDate) {
-              errors['additionalContact.birthDate'] = 'Data de nascimento é obrigatória'
             }
             if (!additionalContact.email?.trim()) {
               errors['additionalContact.email'] = 'E-mail é obrigatório'

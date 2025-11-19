@@ -201,16 +201,12 @@ export default function ConfigPage() {
         canManageBuildings: preferences.canManageBuildings,
         canManageOnlyAssinedProposals: preferences.canManageOnlyAssinedProposals
       }
+      if (initialPreferences === null) {
+        setInitialPreferences({ ...mapped })
+      }
       setPreferencesForm(mapped)
-      setInitialPreferences({ ...mapped })
     }
-  }, [preferences])
-
-  useEffect(() => {
-    if (!preferencesLoading && initialPreferences === null) {
-      setInitialPreferences({ ...preferencesForm })
-    }
-  }, [preferencesLoading, initialPreferences, preferencesForm])
+  }, [preferences, initialPreferences])
 
   const handleInputChange = (section: keyof ConfigData, field: string, value: string) => {
     setConfigData(prev => ({
@@ -247,7 +243,14 @@ export default function ConfigPage() {
     try {
       setSavingPermissions(true)
       await updatePreferences(preferencesForm)
-      setInitialPreferences({ ...preferencesForm })
+      const savedPreferences: PreferencesPayload = {
+        canViewProposals: preferencesForm.canViewProposals,
+        canManageProposals: preferencesForm.canManageProposals,
+        canViewBuildings: preferencesForm.canViewBuildings,
+        canManageBuildings: preferencesForm.canManageBuildings,
+        canManageOnlyAssinedProposals: preferencesForm.canManageOnlyAssinedProposals
+      }
+      setInitialPreferences(savedPreferences)
       setSuccessType('permissions')
       setShowSuccessModal(true)
     } catch (error) {
@@ -337,6 +340,18 @@ export default function ConfigPage() {
           <div className="flex justify-end">
             <Skeleton className="h-10 w-40" />
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center space-y-2">
+          <div className="text-yellow-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-neutral-900">Acesso restrito</h2>
+          <p className="text-neutral-600">Apenas usuários administradores podem acessar esta página.</p>
         </div>
       </div>
     )

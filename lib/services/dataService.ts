@@ -239,15 +239,14 @@ class DataService {
     try {
       const supabase = await getSupabase()
       
-      // Buscar proposta com contatos, unidade e profile criador
+      // Buscar proposta com contatos e unidade
       const query = supabase
         .from('proposals')
         .select(`
           *,
           primary_contact:contacts!proposals_primary_contact_id_fkey(*),
           secondary_contact:contacts!proposals_secondary_contact_id_fkey(*),
-          unit:units(*, building:buildings(*)),
-          created_by_profile:profiles!proposals_created_by_fkey(id, name)
+          unit:units(*, building:buildings(*))
         `)
         .eq('id', proposalId)
 
@@ -349,7 +348,39 @@ class DataService {
         }
       }
 
-      const createdByName = (proposalData as { created_by_profile?: { name?: string | null } | null })?.created_by_profile?.name || null
+      let createdByName: string | null = null
+      
+      const proposalDataTyped = proposalData as { 
+        created_by?: string | null
+      }
+      
+      if (proposalDataTyped.created_by) {
+        try {
+          const viewQuery = supabase
+            .from('profiles_proposals_match')
+            .select('name')
+            .eq('id', proposalDataTyped.created_by)
+          
+          const viewResponse = await viewQuery.maybeSingle()
+          
+          if (!viewResponse.error && viewResponse.data?.name) {
+            createdByName = viewResponse.data.name
+          } else {
+            const profileQuery = supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', proposalDataTyped.created_by)
+            
+            const profileResponse = await profileQuery.maybeSingle()
+            
+            if (!profileResponse.error && profileResponse.data?.name) {
+              createdByName = profileResponse.data.name
+            }
+          }
+        } catch {
+          
+        }
+      }
 
       return { proposalFormData, createdByName }
     } catch (error) {

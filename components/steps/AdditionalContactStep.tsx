@@ -297,6 +297,23 @@ export default function AdditionalContactStep({
       {/* Fourth Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
+            E-mail
+          </label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="Digite o e-mail"
+            className={errors['additionalContact.email'] ? 'border-red-500' : ''}
+          />
+          {errors['additionalContact.email'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.email']}</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="zipCode" className="block text-sm font-medium text-neutral-700 mb-2">
             CEP
           </label>
@@ -331,7 +348,10 @@ export default function AdditionalContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['additionalContact.address']}</p>
           )}
         </div>
+      </div>
 
+      {/* Fifth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="city" className="block text-sm font-medium text-neutral-700 mb-2">
             Cidade
@@ -348,10 +368,7 @@ export default function AdditionalContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['additionalContact.city']}</p>
           )}
         </div>
-      </div>
 
-      {/* Fifth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="neighborhood" className="block text-sm font-medium text-neutral-700 mb-2">
             Bairro
@@ -366,22 +383,6 @@ export default function AdditionalContactStep({
           />
           {errors['additionalContact.neighborhood'] && (
             <p className="text-sm text-red-600 mt-1">{errors['additionalContact.neighborhood']}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-            E-mail
-          </label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            placeholder="Digite o e-mail"
-            className={errors['additionalContact.email'] ? 'border-red-500' : ''}
-          />
-          {errors['additionalContact.email'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['additionalContact.email']}</p>
           )}
         </div>
         <div>

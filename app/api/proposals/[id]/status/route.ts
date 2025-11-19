@@ -95,13 +95,13 @@ export async function PATCH(
 			return NextResponse.json({ error: 'Proposta não encontrada' }, { status: 404 })
 		}
 
+		if (userRole !== 'admin') {
+			return NextResponse.json({ error: 'Apenas administradores podem alterar o status da proposta' }, { status: 403 })
+		}
+
 		const preferences = await getPreferencesByLocationId(supabaseAdmin, existingProposal.agency_id)
 		if (!canManageProposalsPermission(preferences, userRole)) {
 			return NextResponse.json({ error: 'Sem permissão para atualizar propostas' }, { status: 403 })
-		}
-
-		if (restrictProposalsToCreator(preferences, userRole) && existingProposal.created_by && existingProposal.created_by !== requestUserId) {
-			return NextResponse.json({ error: 'Sem permissão para alterar esta proposta' }, { status: 403 })
 		}
 
 		const { data, error } = await supabaseAdmin

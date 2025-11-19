@@ -135,7 +135,7 @@ export default function PrimaryContactStep({
 
         <div>
           <label htmlFor="birthDate" className="block text-sm font-medium text-neutral-700 mb-2">
-            Data de Nascimento *
+            Data de Nascimento
           </label>
           <CustomDatePicker
             value={parseISODateToLocal(formData.birthDate)}
@@ -171,7 +171,7 @@ export default function PrimaryContactStep({
 
         <div>
           <label htmlFor="rgIssuer" className="block text-sm font-medium text-neutral-700 mb-2">
-            Órgão Emissor do RG
+            Órgão Emissor do RG *
           </label>
           <Input
             id="rgIssuer"
@@ -179,7 +179,11 @@ export default function PrimaryContactStep({
             value={formData.rgIssuer}
             onChange={(e) => handleInputChange('rgIssuer', e.target.value)}
             placeholder="Ex.: SSP-SP"
+            className={errors['primaryContact.rgIssuer'] ? 'border-red-500' : ''}
           />
+          {errors['primaryContact.rgIssuer'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.rgIssuer']}</p>
+          )}
         </div>
 
         <div>
@@ -267,6 +271,23 @@ export default function PrimaryContactStep({
       {/* Fourth Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
+          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
+            E-mail *
+          </label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            placeholder="Digite o e-mail"
+            className={errors['primaryContact.email'] ? 'border-red-500' : ''}
+          />
+          {errors['primaryContact.email'] && (
+            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.email']}</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="zipCode" className="block text-sm font-medium text-neutral-700 mb-2">
             CEP *
           </label>
@@ -301,8 +322,10 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.address']}</p>
           )}
         </div>
+      </div>
 
-
+      {/* Fifth Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="city" className="block text-sm font-medium text-neutral-700 mb-2">
             Cidade *
@@ -319,10 +342,7 @@ export default function PrimaryContactStep({
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.city']}</p>
           )}
         </div>
-      </div>
 
-      {/* Fifth Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         <div>
           <label htmlFor="neighborhood" className="block text-sm font-medium text-neutral-700 mb-2">
             Bairro *
@@ -337,23 +357,6 @@ export default function PrimaryContactStep({
           />
           {errors['primaryContact.neighborhood'] && (
             <p className="text-sm text-red-600 mt-1">{errors['primaryContact.neighborhood']}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-2">
-            E-mail *
-          </label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            placeholder="Digite o e-mail"
-            className={errors['primaryContact.email'] ? 'border-red-500' : ''}
-          />
-          {errors['primaryContact.email'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['primaryContact.email']}</p>
           )}
         </div>
 

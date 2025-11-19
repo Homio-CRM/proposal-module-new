@@ -142,15 +142,29 @@ export default function PropertyDataStep({
   
   // Se há uma unidade selecionada que não está disponível, incluí-la na lista
   const filteredUnits = (() => {
-    if (!formData.unitId) return availableUnits
+    let units = availableUnits
     
-    const selectedUnit = allUnits.find(u => u.id === formData.unitId)
-    if (selectedUnit && selectedUnit.status !== 'available') {
-      // Incluir a unidade selecionada mesmo que não esteja disponível
-      return [selectedUnit, ...availableUnits.filter(u => u.id !== formData.unitId)]
+    if (formData.unitId) {
+      const selectedUnit = allUnits.find(u => u.id === formData.unitId)
+      if (selectedUnit && selectedUnit.status !== 'available') {
+        units = [selectedUnit, ...availableUnits.filter(u => u.id !== formData.unitId)]
+      }
     }
     
-    return availableUnits
+    const unitsWithTower = units.filter(u => u.tower && u.tower.trim() !== '')
+    const unitsWithoutTower = units.filter(u => !u.tower || u.tower.trim() === '')
+    
+    const sortedWithTower = unitsWithTower.sort((a, b) => {
+      const towerCompare = (a.tower || '').localeCompare(b.tower || '', 'pt-BR')
+      if (towerCompare !== 0) return towerCompare
+      return (a.number || '').localeCompare(b.number || '', 'pt-BR', { numeric: true })
+    })
+    
+    const sortedWithoutTower = unitsWithoutTower.sort((a, b) => {
+      return (a.number || '').localeCompare(b.number || '', 'pt-BR', { numeric: true })
+    })
+    
+    return [...sortedWithTower, ...sortedWithoutTower]
   })()
   
   // Para verificar status, usar todas as unidades
