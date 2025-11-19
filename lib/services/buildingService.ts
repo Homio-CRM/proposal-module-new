@@ -42,8 +42,81 @@ interface UnitDBRow {
   name: string
   status: UnitStatusDB
   agency_id: string
+  gross_price_amount: number
+  price_correction_rate: number
+  bedroom_count: number
+  private_area: number
+  garden_area: number
+  total_area: number
+  parking_space_count: number
   created_at: string
   updated_at: string
+}
+
+interface MonthlyAdjustmentRateDBRow {
+  id: string
+  unit_id: string
+  year: number
+  january_rate: number
+  february_rate: number
+  march_rate: number
+  april_rate: number
+  may_rate: number
+  june_rate: number
+  july_rate: number
+  august_rate: number
+  september_rate: number
+  october_rate: number
+  november_rate: number
+  december_rate: number
+  created_at: string
+  updated_at: string
+}
+
+function mapUnitDBRowToUnit(unit: UnitDBRow, adjustmentRates: MonthlyAdjustmentRateDBRow[] = []): Unit {
+  const grossPrice = Number(unit.gross_price_amount) || 0
+  const correctionRate = Number(unit.price_correction_rate) || 0
+  const currentValue = grossPrice * (1 + correctionRate)
+
+  return {
+    id: unit.id,
+    building_id: unit.building_id,
+    number: unit.number,
+    floor: unit.floor,
+    tower: unit.tower,
+    name: unit.name,
+    status: mapStatusFromDB(unit.status),
+    agency_id: unit.agency_id,
+    gross_price_amount: Number(unit.gross_price_amount),
+    price_correction_rate: Number(unit.price_correction_rate),
+    bedroom_count: unit.bedroom_count,
+    private_area: Number(unit.private_area),
+    garden_area: Number(unit.garden_area),
+    total_area: Number(unit.total_area),
+    parking_space_count: unit.parking_space_count,
+    current_value: currentValue,
+    monthly_adjustment_rates: adjustmentRates.map((rate: MonthlyAdjustmentRateDBRow) => ({
+      id: rate.id,
+      unit_id: rate.unit_id,
+      year: rate.year,
+      january_rate: Number(rate.january_rate),
+      february_rate: Number(rate.february_rate),
+      march_rate: Number(rate.march_rate),
+      april_rate: Number(rate.april_rate),
+      may_rate: Number(rate.may_rate),
+      june_rate: Number(rate.june_rate),
+      july_rate: Number(rate.july_rate),
+      august_rate: Number(rate.august_rate),
+      september_rate: Number(rate.september_rate),
+      october_rate: Number(rate.october_rate),
+      november_rate: Number(rate.november_rate),
+      december_rate: Number(rate.december_rate),
+      created_at: rate.created_at,
+      updated_at: rate.updated_at
+    })),
+    created_at: unit.created_at,
+    updated_at: unit.updated_at
+  }
 }
 
 class BuildingService {
@@ -142,18 +215,30 @@ class BuildingService {
         throw new Error(`Erro ao buscar unidades: ${unitsError.message}`)
       }
 
-      const units: Unit[] = (unitsData || []).map((unit: UnitDBRow) => ({
-        id: unit.id,
-        building_id: unit.building_id,
-        number: unit.number,
-        floor: unit.floor,
-        tower: unit.tower,
-        name: unit.name,
-        status: mapStatusFromDB(unit.status),
-        agency_id: unit.agency_id,
-        created_at: unit.created_at,
-        updated_at: unit.updated_at
-      }))
+      const unitIds = (unitsData || []).map((unit: UnitDBRow) => unit.id)
+
+      const { data: adjustmentRatesData, error: adjustmentRatesError } = await supabase
+        .from('monthly_adjustment_rates')
+        .select('*')
+        .in('unit_id', unitIds)
+
+      if (adjustmentRatesError) {
+        console.error('🏠 [BuildingService] Error fetching monthly adjustment rates:', adjustmentRatesError)
+        throw new Error(`Erro ao buscar taxas de ajuste mensal: ${adjustmentRatesError.message}`)
+      }
+
+      const adjustmentRatesByUnitId = new Map<string, MonthlyAdjustmentRateDBRow[]>()
+      ;(adjustmentRatesData || []).forEach((rate: MonthlyAdjustmentRateDBRow) => {
+        if (!adjustmentRatesByUnitId.has(rate.unit_id)) {
+          adjustmentRatesByUnitId.set(rate.unit_id, [])
+        }
+        adjustmentRatesByUnitId.get(rate.unit_id)!.push(rate)
+      })
+
+      const units: Unit[] = (unitsData || []).map((unit: UnitDBRow) => {
+        const adjustmentRates = adjustmentRatesByUnitId.get(unit.id) || []
+        return mapUnitDBRowToUnit(unit, adjustmentRates)
+      })
 
       const totalUnits = units.length
       const availableUnits = units.filter(u => u.status === 'livre').length
@@ -186,7 +271,18 @@ class BuildingService {
 
   async updateUnit(
     unitId: string, 
-    updates: { name?: string; number?: string; floor?: string; tower?: string }
+    updates: { 
+      name?: string
+      number?: string
+      floor?: string
+      tower?: string
+      gross_price_amount?: number
+      price_correction_rate?: number
+      bedroom_count?: number
+      private_area?: number
+      garden_area?: number
+      parking_space_count?: number
+    }
   ): Promise<Unit> {
     try {
       const supabase = await getSupabase()
@@ -210,18 +306,12 @@ class BuildingService {
         throw new Error('Unidade não encontrada')
       }
 
-      const updatedUnit: Unit = {
-        id: data.id,
-        building_id: data.building_id,
-        number: data.number,
-        floor: data.floor,
-        tower: data.tower,
-        name: data.name,
-        status: mapStatusFromDB(data.status),
-        agency_id: data.agency_id,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      }
+      const { data: adjustmentRatesData } = await supabase
+        .from('monthly_adjustment_rates')
+        .select('*')
+        .eq('unit_id', unitId)
+
+      const updatedUnit = mapUnitDBRowToUnit(data as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
 
       userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${data.building_id}_${data.agency_id}`)
       userCache.delete(`${CACHE_KEYS.LISTINGS}_buildings_${data.agency_id}`)
@@ -256,18 +346,12 @@ class BuildingService {
         throw new Error('Unidade não encontrada')
       }
 
-      const updatedUnit: Unit = {
-        id: data.id,
-        building_id: data.building_id,
-        number: data.number,
-        floor: data.floor,
-        tower: data.tower,
-        name: data.name,
-        status: mapStatusFromDB(data.status),
-        agency_id: data.agency_id,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      }
+      const { data: adjustmentRatesData } = await supabase
+        .from('monthly_adjustment_rates')
+        .select('*')
+        .eq('unit_id', unitId)
+
+      const updatedUnit = mapUnitDBRowToUnit(data as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
 
       const webhookResult = await sendUnitStatusWebhook(
         updatedUnit.id,
@@ -415,6 +499,94 @@ class BuildingService {
 
     } catch (error) {
       console.error('🏠 [BuildingService] Error in deleteBuilding:', error)
+      throw error
+    }
+  }
+
+  async updateMonthlyAdjustmentRates(
+    unitId: string,
+    rates: Array<{
+      id?: string
+      year: number
+      january_rate: number
+      february_rate: number
+      march_rate: number
+      april_rate: number
+      may_rate: number
+      june_rate: number
+      july_rate: number
+      august_rate: number
+      september_rate: number
+      october_rate: number
+      november_rate: number
+      december_rate: number
+    }>
+  ): Promise<Unit> {
+    try {
+      const supabase = await getSupabase()
+      
+      for (const rate of rates) {
+        const rateData = {
+          unit_id: unitId,
+          year: rate.year,
+          january_rate: rate.january_rate,
+          february_rate: rate.february_rate,
+          march_rate: rate.march_rate,
+          april_rate: rate.april_rate,
+          may_rate: rate.may_rate,
+          june_rate: rate.june_rate,
+          july_rate: rate.july_rate,
+          august_rate: rate.august_rate,
+          september_rate: rate.september_rate,
+          october_rate: rate.october_rate,
+          november_rate: rate.november_rate,
+          december_rate: rate.december_rate,
+          updated_at: new Date().toISOString()
+        }
+
+        if (rate.id) {
+          const { error: updateError } = await supabase
+            .from('monthly_adjustment_rates')
+            .update(rateData)
+            .eq('id', rate.id)
+
+          if (updateError) {
+            throw new Error(`Erro ao atualizar taxa de ajuste: ${updateError.message}`)
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('monthly_adjustment_rates')
+            .insert(rateData)
+
+          if (insertError) {
+            throw new Error(`Erro ao criar taxa de ajuste: ${insertError.message}`)
+          }
+        }
+      }
+
+      const { data: unitData } = await supabase
+        .from('units')
+        .select('*')
+        .eq('id', unitId)
+        .single()
+
+      if (!unitData) {
+        throw new Error('Unidade não encontrada')
+      }
+
+      const { data: adjustmentRatesData } = await supabase
+        .from('monthly_adjustment_rates')
+        .select('*')
+        .eq('unit_id', unitId)
+
+      const updatedUnit = mapUnitDBRowToUnit(unitData as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
+
+      userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${unitData.building_id}_${unitData.agency_id}`)
+      userCache.delete(`${CACHE_KEYS.LISTINGS}_buildings_${unitData.agency_id}`)
+
+      return updatedUnit
+    } catch (error) {
+      console.error('🏠 [BuildingService] Error in updateMonthlyAdjustmentRates:', error)
       throw error
     }
   }

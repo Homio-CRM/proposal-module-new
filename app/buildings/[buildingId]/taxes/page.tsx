@@ -5,14 +5,14 @@ import { useState, useEffect } from 'react'
 import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { BuildingDetails } from '@/components/BuildingDetails'
 import { buildingService } from '@/lib/services/buildingService'
-import { BuildingWithUnits, UnitStatus } from '@/lib/types/building'
-import { ArrowLeft, AlertCircle, TrendingUp } from 'lucide-react'
+import { BuildingWithUnits } from '@/lib/types/building'
+import { ArrowLeft, AlertCircle } from 'lucide-react'
 import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
-import { canManageBuildings as canManageBuildingsPermission, canViewBuildings as canViewBuildingsPermission } from '@/lib/utils/permissions'
+import { canViewBuildings as canViewBuildingsPermission, canManageBuildings as canManageBuildingsPermission } from '@/lib/utils/permissions'
+import { MonthlyAdjustmentRatesEditableTable } from '@/components/MonthlyAdjustmentRatesEditableTable'
 
-export default function BuildingDetailPage() {
+export default function BuildingTaxesPage() {
   const params = useParams()
   const router = useRouter()
   const { userData, loading, error } = useUserDataContext()
@@ -20,30 +20,29 @@ export default function BuildingDetailPage() {
   const [building, setBuilding] = useState<BuildingWithUnits | null>(null)
   const [buildingLoading, setBuildingLoading] = useState(true)
   const [buildingError, setBuildingError] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<UnitStatus | 'all'>('all')
   
   const buildingId = params.buildingId as string
   const userRole = userData?.role ?? 'user'
   const allowViewBuildings = canViewBuildingsPermission(preferences ?? null, userRole)
   const allowManageBuildings = canManageBuildingsPermission(preferences ?? null, userRole)
 
-  useEffect(() => {
-    const fetchBuilding = async () => {
-      if (!userData?.activeLocation || !buildingId || !allowViewBuildings) return;
-      
-      setBuildingLoading(true);
-      setBuildingError(null);
-      
-      try {
-        const data = await buildingService.fetchBuildingWithUnits(buildingId, userData.activeLocation);
-        setBuilding(data);
-      } catch (err) {
-        setBuildingError(err instanceof Error ? err.message : 'Erro ao carregar empreendimento');
-      } finally {
-        setBuildingLoading(false);
-      }
-    };
+  const fetchBuilding = async () => {
+    if (!userData?.activeLocation || !buildingId || !allowViewBuildings) return;
+    
+    setBuildingLoading(true);
+    setBuildingError(null);
+    
+    try {
+      const data = await buildingService.fetchBuildingWithUnits(buildingId, userData.activeLocation);
+      setBuilding(data);
+    } catch (err) {
+      setBuildingError(err instanceof Error ? err.message : 'Erro ao carregar empreendimento');
+    } finally {
+      setBuildingLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (!preferencesLoading) {
       fetchBuilding();
     }
@@ -61,22 +60,7 @@ export default function BuildingDetailPage() {
                 <Skeleton className="h-4 w-32" />
               </div>
             </div>
-            
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="bg-white border border-gray-200 rounded-lg p-6">
-                  <Skeleton className="h-6 w-48 mb-4" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Skeleton className="h-96 w-full" />
           </div>
         </div>
       </div>
@@ -150,14 +134,14 @@ export default function BuildingDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
-                onClick={() => router.push('/buildings')}
+                onClick={() => router.push(`/buildings/${buildingId}`)}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -165,32 +149,30 @@ export default function BuildingDetailPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {building.name}
+                  Taxas de Ajuste Mensais - {building.name}
                 </h1>
                 <p className="text-gray-600">
                   {building.city}, {building.state}
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/buildings/${buildingId}/taxes`)}
-              className="flex items-center gap-2"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Ver Taxas de Ajuste Mensais
-            </Button>
           </div>
 
-          {/* Building Details */}
-          <BuildingDetails
-            building={building}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            canManage={allowManageBuildings}
-          />
+          {/* Taxas Table */}
+          {allowManageBuildings ? (
+            <MonthlyAdjustmentRatesEditableTable 
+              units={building.units} 
+              buildingId={buildingId}
+              onSave={fetchBuilding}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Você não tem permissão para editar as taxas</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
+

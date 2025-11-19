@@ -23,15 +23,32 @@ export default function UnitCreateDialog({ open, onOpenChange, buildingId, onCre
   const [tower, setTower] = useState('')
   const [floor, setFloor] = useState('')
   const [status, setStatus] = useState<'livre' | 'reservado' | 'vendido'>('livre')
+  const [name, setName] = useState('')
+  const [grossPriceAmount, setGrossPriceAmount] = useState('')
+  const [bedroomCount, setBedroomCount] = useState('')
+  const [privateArea, setPrivateArea] = useState('')
+  const [gardenArea, setGardenArea] = useState('')
+  const [parkingSpaceCount, setParkingSpaceCount] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
+  const formatDecimalInput = (value: string, maxDecimals: number = 2): string => {
+    value = value.replace(/[^\d,]/g, '')
+    const parts = value.split(',')
+    if (parts.length > 2) {
+      return parts[0] + ',' + parts.slice(1).join('')
+    }
+    if (parts.length === 2 && parts[1].length > maxDecimals) {
+      return parts[0] + ',' + parts[1].substring(0, maxDecimals)
+    }
+    return value
+  }
+
   const validate = () => {
     const e: Record<string, string> = {}
     if (!number.trim()) e.number = 'Número é obrigatório'
-    if (!tower.trim()) e.tower = 'Torre é obrigatória'
-    if (!floor.trim()) e.floor = 'Andar é obrigatório'
+    if (!name.trim()) e.name = 'Nome é obrigatório'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -50,11 +67,17 @@ export default function UnitCreateDialog({ open, onOpenChange, buildingId, onCre
         .from('units')
         .insert({
           number: number.trim(),
-          tower: tower.trim(),
-          floor: floor.trim(),
+          name: name.trim(),
+          tower: tower.trim() || null,
+          floor: floor.trim() || null,
           status: mapStatusToDB(status),
           building_id: buildingId,
-          agency_id: userData.activeLocation
+          agency_id: userData.activeLocation,
+          gross_price_amount: grossPriceAmount ? parseFloat(grossPriceAmount.replace(',', '.')) : 0,
+          bedroom_count: bedroomCount ? parseInt(bedroomCount) : 0,
+          private_area: privateArea ? parseFloat(privateArea.replace(',', '.')) : 0,
+          garden_area: gardenArea ? parseFloat(gardenArea.replace(',', '.')) : 0,
+          parking_space_count: parkingSpaceCount ? parseInt(parkingSpaceCount) : 0
         })
       if (error) throw new Error(error.message)
       userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${buildingId}_${userData.activeLocation}`)
@@ -62,9 +85,15 @@ export default function UnitCreateDialog({ open, onOpenChange, buildingId, onCre
       onOpenChange(false)
       if (onCreated) onCreated()
       setNumber('')
+      setName('')
       setTower('')
       setFloor('')
       setStatus('livre')
+      setGrossPriceAmount('')
+      setBedroomCount('')
+      setPrivateArea('')
+      setGardenArea('')
+      setParkingSpaceCount('')
       setErrors({})
       setFormError('')
     } catch (err) {
@@ -83,20 +112,23 @@ export default function UnitCreateDialog({ open, onOpenChange, buildingId, onCre
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label htmlFor="unit-name" className="block text-sm font-medium text-gray-700 mb-2">Nome *</label>
+            <Input id="unit-name" value={name} onChange={(e) => setName(e.target.value)} className={errors.name ? 'border-red-500' : ''} disabled={submitting} placeholder="Nome da unidade" />
+            {errors.name && (<p className="text-sm text-red-600 mt-1">{errors.name}</p>)}
+          </div>
+          <div>
             <label htmlFor="unit-number" className="block text-sm font-medium text-gray-700 mb-2">Número *</label>
-            <Input id="unit-number" value={number} onChange={(e) => setNumber(e.target.value)} className={errors.number ? 'border-red-500' : ''} disabled={submitting} />
+            <Input id="unit-number" value={number} onChange={(e) => setNumber(e.target.value)} className={errors.number ? 'border-red-500' : ''} disabled={submitting} placeholder="Número da unidade" />
             {errors.number && (<p className="text-sm text-red-600 mt-1">{errors.number}</p>)}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="unit-tower" className="block text-sm font-medium text-gray-700 mb-2">Torre *</label>
-              <Input id="unit-tower" value={tower} onChange={(e) => setTower(e.target.value)} className={errors.tower ? 'border-red-500' : ''} disabled={submitting} />
-              {errors.tower && (<p className="text-sm text-red-600 mt-1">{errors.tower}</p>)}
+              <label htmlFor="unit-tower" className="block text-sm font-medium text-gray-700 mb-2">Torre</label>
+              <Input id="unit-tower" value={tower} onChange={(e) => setTower(e.target.value)} disabled={submitting} placeholder="Ex: A" />
             </div>
             <div>
-              <label htmlFor="unit-floor" className="block text-sm font-medium text-gray-700 mb-2">Andar *</label>
-              <Input id="unit-floor" value={floor} onChange={(e) => setFloor(e.target.value)} className={errors.floor ? 'border-red-500' : ''} disabled={submitting} />
-              {errors.floor && (<p className="text-sm text-red-600 mt-1">{errors.floor}</p>)}
+              <label htmlFor="unit-floor" className="block text-sm font-medium text-gray-700 mb-2">Andar</label>
+              <Input id="unit-floor" value={floor} onChange={(e) => setFloor(e.target.value)} disabled={submitting} placeholder="Ex: 5" />
             </div>
           </div>
           <div>
@@ -106,6 +138,30 @@ export default function UnitCreateDialog({ open, onOpenChange, buildingId, onCre
               <option value="reservado">Reservado</option>
               <option value="vendido">Vendido</option>
             </Select>
+          </div>
+          <div>
+            <label htmlFor="unit-gross-price" className="block text-sm font-medium text-gray-700 mb-2">Valor Bruto</label>
+            <Input id="unit-gross-price" type="text" value={grossPriceAmount} onChange={(e) => setGrossPriceAmount(formatDecimalInput(e.target.value))} disabled={submitting} placeholder="0,00" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="unit-bedroom-count" className="block text-sm font-medium text-gray-700 mb-2">Quartos</label>
+              <Input id="unit-bedroom-count" type="number" value={bedroomCount} onChange={(e) => setBedroomCount(e.target.value)} disabled={submitting} placeholder="0" />
+            </div>
+            <div>
+              <label htmlFor="unit-parking-count" className="block text-sm font-medium text-gray-700 mb-2">Vagas de Estacionamento</label>
+              <Input id="unit-parking-count" type="number" value={parkingSpaceCount} onChange={(e) => setParkingSpaceCount(e.target.value)} disabled={submitting} placeholder="0" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="unit-private-area" className="block text-sm font-medium text-gray-700 mb-2">Área Privativa (m²)</label>
+              <Input id="unit-private-area" type="text" value={privateArea} onChange={(e) => setPrivateArea(formatDecimalInput(e.target.value))} disabled={submitting} placeholder="0,00" />
+            </div>
+            <div>
+              <label htmlFor="unit-garden-area" className="block text-sm font-medium text-gray-700 mb-2">Área do Jardim (m²)</label>
+              <Input id="unit-garden-area" type="text" value={gardenArea} onChange={(e) => setGardenArea(formatDecimalInput(e.target.value))} disabled={submitting} placeholder="0,00" />
+            </div>
           </div>
           {formError && (<p className="text-sm text-red-600">{formError}</p>)}
           <div className="flex justify-end gap-3">

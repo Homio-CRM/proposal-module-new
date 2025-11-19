@@ -14,6 +14,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useUserDataContext } from '@/lib/contexts/UserDataContext'
 import UnitCreateDialog from '@/components/UnitCreateDialog'
 import BuildingEditDialog from '@/components/BuildingEditDialog'
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog'
@@ -28,17 +29,35 @@ interface BuildingDetailsProps {
 
 export function BuildingDetails({ building, statusFilter = 'all', onStatusFilterChange, canManage = true }: BuildingDetailsProps) {
   const router = useRouter()
+  const { userData } = useUserDataContext()
   const [openCreateUnit, setOpenCreateUnit] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteUnitDialogOpen, setDeleteUnitDialogOpen] = useState(false)
+  const [unitToDelete, setUnitToDelete] = useState<string | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({})
   const [currentBuilding, setCurrentBuilding] = useState(building)
 
   const filteredUnits = useMemo(() => {
-    if (statusFilter === 'all') {
-      return building.units
-    }
-    return building.units.filter(unit => unit.status === statusFilter)
-  }, [building.units, statusFilter])
+    let units = statusFilter === 'all' 
+      ? currentBuilding.units 
+      : currentBuilding.units.filter(unit => unit.status === statusFilter)
+    
+    const unitsWithTower = units.filter(unit => unit.tower && unit.tower.trim() !== '')
+    const unitsWithoutTower = units.filter(unit => !unit.tower || unit.tower.trim() === '')
+    
+    const sortedWithTower = unitsWithTower.sort((a, b) => {
+      const towerCompare = (a.tower || '').localeCompare(b.tower || '', 'pt-BR', { sensitivity: 'base' })
+      if (towerCompare !== 0) return towerCompare
+      return (a.number || '').localeCompare(b.number || '', 'pt-BR', { numeric: true })
+    })
+    
+    const sortedWithoutTower = unitsWithoutTower.sort((a, b) => {
+      return (a.number || '').localeCompare(b.number || '', 'pt-BR', { numeric: true })
+    })
+    
+    return [...sortedWithTower, ...sortedWithoutTower]
+  }, [currentBuilding.units, statusFilter])
 
 
 
@@ -83,6 +102,44 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
   const handleDeleteBuilding = async () => {
     await buildingService.deleteBuilding(currentBuilding.id)
     router.push('/buildings')
+  }
+
+  const handleDeleteUnit = async () => {
+    if (!unitToDelete || !userData?.activeLocation) return
+    await buildingService.deleteUnit(unitToDelete)
+    const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
+    if (updatedBuilding) {
+      setCurrentBuilding(updatedBuilding)
+    }
+    setDeleteUnitDialogOpen(false)
+    setUnitToDelete(null)
+  }
+
+  const handleUnitStatusChange = async (unitId: string, newStatus: UnitStatus) => {
+    const unit = currentBuilding.units.find(u => u.id === unitId)
+    if (!unit || unit.status === newStatus || statusUpdating[unitId] || !userData?.activeLocation) return
+
+    setStatusUpdating(prev => ({ ...prev, [unitId]: true }))
+
+    try {
+      await buildingService.updateUnitStatus(unitId, newStatus)
+      const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
+      if (updatedBuilding) {
+        setCurrentBuilding(updatedBuilding)
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status da unidade:', error)
+    } finally {
+      setStatusUpdating(prev => ({ ...prev, [unitId]: false }))
+    }
+  }
+
+  const handleUnitCreated = async () => {
+    if (!userData?.activeLocation) return
+    const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
+    if (updatedBuilding) {
+      setCurrentBuilding(updatedBuilding)
+    }
   }
 
   return (
@@ -151,19 +208,19 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-gray-900">{building.totalUnits}</div>
+              <div className="text-2xl font-bold text-gray-900">{currentBuilding.totalUnits}</div>
               <div className="text-sm text-gray-600">Total</div>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{building.availableUnits}</div>
+              <div className="text-2xl font-bold text-green-600">{currentBuilding.availableUnits}</div>
               <div className="text-sm text-green-600">Livres</div>
             </div>
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{building.reservedUnits}</div>
+              <div className="text-2xl font-bold text-yellow-600">{currentBuilding.reservedUnits}</div>
               <div className="text-sm text-yellow-600">Reservadas</div>
             </div>
             <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{building.soldUnits}</div>
+              <div className="text-2xl font-bold text-blue-600">{currentBuilding.soldUnits}</div>
               <div className="text-sm text-blue-600">Vendidas</div>
             </div>
           </div>
@@ -179,7 +236,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
               Unidades ({filteredUnits.length})
               {statusFilter !== 'all' && (
                 <span className="text-sm text-gray-500 font-normal">
-                  de {building.units.length} total
+                  de {currentBuilding.units.length} total
                 </span>
               )}
             </span>
@@ -207,11 +264,13 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
             {filteredUnits.map((unit) => (
               <div 
                 key={unit.id}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => handleUnitClick(unit.id)}
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
+                  <div 
+                    className="flex items-center space-x-4 flex-1 cursor-pointer"
+                    onClick={() => handleUnitClick(unit.id)}
+                  >
                     <div className="flex-shrink-0">
                       <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
                         <Home className="h-6 w-6 text-primary-600" />
@@ -220,7 +279,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
                     <div>
                       <div className="flex items-center space-x-2">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Unidade {unit.number}
+                          {unit.name || `Unidade ${unit.number}`}
                         </h3>
                         <Badge variant={getStatusBadgeVariant(unit.status)}>
                           {getStatusLabel(unit.status)}
@@ -231,6 +290,31 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
                       </div>
                     </div>
                   </div>
+                  {canManage && (
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={unit.status}
+                        onChange={(e) => handleUnitStatusChange(unit.id, e.target.value as UnitStatus)}
+                        disabled={statusUpdating[unit.id]}
+                        className="w-32"
+                      >
+                        <option value="livre">Livre</option>
+                        <option value="reservado">Reservado</option>
+                        <option value="vendido">Vendido</option>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setUnitToDelete(unit.id)
+                          setDeleteUnitDialogOpen(true)
+                        }}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -240,7 +324,12 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
 
       {canManage && (
         <>
-          <UnitCreateDialog open={openCreateUnit} onOpenChange={setOpenCreateUnit} buildingId={currentBuilding.id} />
+          <UnitCreateDialog 
+            open={openCreateUnit} 
+            onOpenChange={setOpenCreateUnit} 
+            buildingId={currentBuilding.id}
+            onCreated={handleUnitCreated}
+          />
           
           <BuildingEditDialog
             open={editDialogOpen}
@@ -257,6 +346,16 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
             description={`Tem certeza que deseja deletar o empreendimento "${currentBuilding.name}"?`}
             itemName={currentBuilding.name}
             itemType="empreendimento"
+          />
+
+          <DeleteConfirmationDialog
+            open={deleteUnitDialogOpen}
+            onOpenChange={setDeleteUnitDialogOpen}
+            onConfirm={handleDeleteUnit}
+            title="Deletar Unidade"
+            description={unitToDelete ? `Tem certeza que deseja deletar a unidade "${currentBuilding.units.find(u => u.id === unitToDelete)?.number || unitToDelete}"?` : ''}
+            itemName={unitToDelete ? currentBuilding.units.find(u => u.id === unitToDelete)?.number || unitToDelete : ''}
+            itemType="unidade"
           />
         </>
       )}

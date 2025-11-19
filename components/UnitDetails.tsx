@@ -5,11 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Unit, Building, UnitStatus } from '@/lib/types/building'
+import { Unit, Building, UnitStatus, MonthlyAdjustmentRate } from '@/lib/types/building'
 import { 
   Home, 
-  Building2, 
-  MapPin,
   Edit,
   Trash2,
   AlertCircle
@@ -17,6 +15,7 @@ import {
 import { useRouter } from 'next/navigation'
 import UnitEditDialog from './UnitEditDialog'
 import DeleteConfirmationDialog from './DeleteConfirmationDialog'
+import MonthlyAdjustmentRatesEditDialog from './MonthlyAdjustmentRatesEditDialog'
 import { buildingService } from '@/lib/services/buildingService'
 
 interface UnitWithBuilding extends Unit {
@@ -34,16 +33,13 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
   const building = unitWithBuilding.building
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editRatesDialogOpen, setEditRatesDialogOpen] = useState(false)
   const [currentUnit, setCurrentUnit] = useState(unit)
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
 
 
 
-
-  const handleBuildingClick = () => {
-    router.push(`/buildings/${building.id}`)
-  }
 
   const handleUnitUpdated = (updatedUnit: Unit) => {
     setCurrentUnit({
@@ -57,6 +53,7 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
     await buildingService.deleteUnit(currentUnit.id)
     router.push(`/buildings/${building.id}`)
   }
+
 
   const handleStatusChange = async (newStatus: UnitStatus) => {
     if (!canManage || newStatus === currentUnit.status || statusUpdating) return
@@ -155,40 +152,147 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
                 <p className="text-sm text-gray-900">{currentUnit.tower}</p>
               </div>
             )}
+            <div>
+              <label className="text-sm font-medium text-gray-700">Taxa de Correção</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.price_correction_rate !== undefined && currentUnit.price_correction_rate !== null
+                  ? `${((1 + currentUnit.price_correction_rate) * 100).toFixed(2)}%`
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Valor Atual</label>
+              <p className="text-lg font-bold text-primary-600">
+                {currentUnit.current_value && !isNaN(currentUnit.current_value)
+                  ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentUnit.current_value)
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Quartos</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.bedroom_count !== undefined && currentUnit.bedroom_count !== null && !isNaN(currentUnit.bedroom_count)
+                  ? currentUnit.bedroom_count
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Vagas de Estacionamento</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.parking_space_count !== undefined && currentUnit.parking_space_count !== null && !isNaN(currentUnit.parking_space_count)
+                  ? currentUnit.parking_space_count
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Área Privativa</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.private_area && !isNaN(currentUnit.private_area)
+                  ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentUnit.private_area)} m²`
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Área do Jardim</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.garden_area && !isNaN(currentUnit.garden_area)
+                  ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentUnit.garden_area)} m²`
+                  : '-'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Área Total</label>
+              <p className="text-sm text-gray-900">
+                {currentUnit.total_area && !isNaN(currentUnit.total_area)
+                  ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentUnit.total_area)} m²`
+                  : '-'}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Empreendimento */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary-600" />
-            Empreendimento
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5 text-primary-600" />
+              Taxas de Ajuste Mensal
+            </CardTitle>
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditRatesDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Editar
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div 
-            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-            onClick={handleBuildingClick}
-          >
-            <div className="flex items-center space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-primary-600" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors">
-                  {building.name}
-                </h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPin className="h-4 w-4" />
-                  <span>{building.address}, {building.city} - {building.state}</span>
-                </div>
-              </div>
+          {currentUnit.monthly_adjustment_rates && currentUnit.monthly_adjustment_rates.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Ano</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Jan</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Fev</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Mar</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Abr</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Mai</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Jun</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Jul</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Ago</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Set</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Out</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Nov</th>
+                    <th className="text-center py-3 px-2 font-semibold text-sm text-gray-700">Dez</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentUnit.monthly_adjustment_rates.map((rate: MonthlyAdjustmentRate, index: number) => {
+                    const months = [
+                      rate.january_rate || 0,
+                      rate.february_rate || 0,
+                      rate.march_rate || 0,
+                      rate.april_rate || 0,
+                      rate.may_rate || 0,
+                      rate.june_rate || 0,
+                      rate.july_rate || 0,
+                      rate.august_rate || 0,
+                      rate.september_rate || 0,
+                      rate.october_rate || 0,
+                      rate.november_rate || 0,
+                      rate.december_rate || 0
+                    ]
+                    const isFirstRow = index === 0
+                    return (
+                      <tr key={rate.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium text-gray-900">{rate.year}</td>
+                        {months.map((monthRate, monthIndex) => (
+                          <td key={monthIndex} className="text-center py-3 px-2 text-sm text-gray-700">
+                            {monthRate > 0 ? `${(monthRate * 100).toFixed(2)}%` : '-'}
+                          </td>
+                        ))}
+                        <td className="text-center py-3 px-4 font-semibold text-gray-900">
+                          {isFirstRow && currentUnit.price_correction_rate && currentUnit.price_correction_rate > 0
+                            ? `${(currentUnit.price_correction_rate * 100).toFixed(2)}%`
+                            : '-'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">Nenhuma taxa de ajuste mensal cadastrada</p>
+          )}
         </CardContent>
       </Card>
 
@@ -197,6 +301,13 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
           <UnitEditDialog
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
+            unit={currentUnit}
+            onUpdated={handleUnitUpdated}
+          />
+
+          <MonthlyAdjustmentRatesEditDialog
+            open={editRatesDialogOpen}
+            onOpenChange={setEditRatesDialogOpen}
             unit={currentUnit}
             onUpdated={handleUnitUpdated}
           />
