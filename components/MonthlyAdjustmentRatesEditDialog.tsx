@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { buildingService } from '@/lib/services/buildingService'
-import { Unit, MonthlyAdjustmentRate } from '@/lib/types/building'
+import { Unit } from '@/lib/types/building'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface MonthlyAdjustmentRatesEditDialogProps {
@@ -341,7 +341,7 @@ export default function MonthlyAdjustmentRatesEditDialog({
             
             {rates.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-4">
-                Nenhuma taxa cadastrada. Clique em "Adicionar Ano" para começar.
+                Nenhuma taxa cadastrada. Clique em &quot;Adicionar Ano&quot; para começar.
               </p>
             )}
           </div>

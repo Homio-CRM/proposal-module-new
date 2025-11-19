@@ -39,7 +39,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
   const [currentBuilding, setCurrentBuilding] = useState(building)
 
   const filteredUnits = useMemo(() => {
-    let units = statusFilter === 'all' 
+    const units = statusFilter === 'all' 
       ? currentBuilding.units 
       : currentBuilding.units.filter(unit => unit.status === statusFilter)
     

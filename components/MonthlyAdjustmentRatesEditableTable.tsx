@@ -425,7 +425,7 @@ export function MonthlyAdjustmentRatesEditableTable({
           </div>
         </CardHeader>
         <CardContent className="py-12">
-          <p className="text-center text-gray-500">Nenhuma taxa cadastrada. Clique em "Adicionar Ano" para começar.</p>
+          <p className="text-center text-gray-500">Nenhuma taxa cadastrada. Clique em &quot;Adicionar Ano&quot; para começar.</p>
         </CardContent>
       </Card>
     )
