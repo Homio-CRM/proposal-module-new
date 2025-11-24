@@ -745,6 +745,42 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
           field_value: field.value || field.fieldValueString || field.fieldValueLabel || field.fieldValueFormatted || ''
         })) : []
 
+        // Mapear campos do formulário para custom fields
+        const contactFieldMapping: Record<string, string[]> = {
+          'cpf': ['cpf'],
+          'rg': ['rg'],
+          'rgIssuer': ['rg__orgao_emissor', 'orgaoEmissor'],
+          'nationality': ['nacionalidade'],
+          'maritalStatus': ['estado_civil', 'civil'],
+          'profession': ['profissao', 'profisso'],
+          'zipCode': ['cep'],
+          'address': ['endereco'],
+          'city': ['cidade'],
+          'neighborhood': ['bairro'],
+          'state': ['estado']
+        }
+
+        Object.entries(contactFieldMapping).forEach(([formField, possibleKeys]) => {
+          const value = contact[formField as keyof ContactData]
+          if (value && typeof value === 'string' && value.trim()) {
+            for (const key of possibleKeys) {
+              const fieldId = customFieldIds.contactFields[key]
+              if (fieldId) {
+                const existingIndex = customFields.findIndex(f => f.id === fieldId)
+                if (existingIndex >= 0) {
+                  customFields[existingIndex].field_value = value.trim()
+                } else {
+                  customFields.push({
+                    id: fieldId,
+                    field_value: value.trim()
+                  })
+                }
+                break
+              }
+            }
+          }
+        })
+
         // Adicionar custom fields de empreendimento, unidade, andar e torre
         if (formData.property && agencyConfig) {
           // Adicionar empreendimento
@@ -792,21 +828,31 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
       // Atualizar contato principal
       const primaryContactData = prepareContactData(formData.primaryContact)
       
+      const primaryContactPayload = {
+        locationId: userData.activeLocation,
+        contactId: formData.primaryContact.homioId || 'new-contact',
+        ...primaryContactData
+      }
+      
+      console.log('[ProposalForm] Primary contact update - REQUEST payload:', JSON.stringify(primaryContactPayload, null, 2))
+      
       const primaryContactRes = await fetch('/api/operations/contact/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          locationId: userData.activeLocation,
-          contactId: formData.primaryContact.homioId || 'new-contact',
-          ...primaryContactData
-        })
+        body: JSON.stringify(primaryContactPayload)
+      })
+
+      const primaryContactResponseData = await primaryContactRes.json().catch(() => null)
+      console.log('[ProposalForm] Primary contact update - RESPONSE:', {
+        status: primaryContactRes.status,
+        statusText: primaryContactRes.statusText,
+        data: primaryContactResponseData
       })
 
       if (!primaryContactRes.ok) {
-        const errorData = await primaryContactRes.json().catch(() => null)
-        console.error('[ProposalForm] Primary contact update failed:', errorData)
+        console.error('[ProposalForm] Primary contact update failed:', primaryContactResponseData)
         setServerError('Falha ao atualizar contato principal')
-        setServerDetails(errorData)
+        setServerDetails(primaryContactResponseData)
         setShowErrorModal(true)
         return
       }
@@ -815,21 +861,31 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
       if (formData.additionalContact && formData.additionalContact.name) {
         const additionalContactData = prepareContactData(formData.additionalContact)
         
+        const additionalContactPayload = {
+          locationId: userData.activeLocation,
+          contactId: formData.additionalContact.homioId || 'new-contact',
+          ...additionalContactData
+        }
+        
+        console.log('[ProposalForm] Additional contact update - REQUEST payload:', JSON.stringify(additionalContactPayload, null, 2))
+        
         const additionalContactRes = await fetch('/api/operations/contact/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            locationId: userData.activeLocation,
-            contactId: formData.additionalContact.homioId || 'new-contact',
-            ...additionalContactData
-          })
+          body: JSON.stringify(additionalContactPayload)
+        })
+
+        const additionalContactResponseData = await additionalContactRes.json().catch(() => null)
+        console.log('[ProposalForm] Additional contact update - RESPONSE:', {
+          status: additionalContactRes.status,
+          statusText: additionalContactRes.statusText,
+          data: additionalContactResponseData
         })
 
         if (!additionalContactRes.ok) {
-          const errorData = await additionalContactRes.json().catch(() => null)
-          console.error('[ProposalForm] Additional contact update failed:', errorData)
+          console.error('[ProposalForm] Additional contact update failed:', additionalContactResponseData)
           setServerError('Falha ao atualizar contato adicional')
-          setServerDetails(errorData)
+          setServerDetails(additionalContactResponseData)
           setShowErrorModal(true)
           return
         }

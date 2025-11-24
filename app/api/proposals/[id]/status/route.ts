@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ProposalStatus } from '@/lib/types/proposal'
 import { sendUnitStatusWebhook } from '@/lib/utils/unitWebhook'
+import { sendFinancePartWebhook } from '@/lib/utils/financeWebhook'
 import { mapStatusFromDB } from '@/lib/services/buildingService'
 import { postToOperations } from '@/lib/operationsClient'
 import { getPreferencesByLocationId } from '@/app/api/utils/preferences'
@@ -285,6 +286,55 @@ export async function PATCH(
 				}
 			} catch (error) {
 				console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar atualização da oportunidade:', error)
+			}
+		}
+
+		if (status === 'aprovada') {
+			try {
+				const { data: proposalWithContact } = await supabaseAdmin
+					.from('proposals')
+					.select('primary_contact_id')
+					.eq('id', proposalId)
+					.single()
+
+				if (proposalWithContact?.primary_contact_id) {
+					const { data: primaryContact } = await supabaseAdmin
+						.from('contacts')
+						.select('homio_id')
+						.eq('id', proposalWithContact.primary_contact_id)
+						.single()
+
+					if (primaryContact?.homio_id) {
+						const { data: installmentsData, error: installmentsError } = await supabaseAdmin
+							.from('installments')
+							.select('id, type, amount_per_installment, installments_count, start_date, total_amount')
+							.eq('proposal_id', proposalId)
+							.order('start_date', { ascending: true })
+
+						if (!installmentsError && installmentsData && installmentsData.length > 0) {
+							const installments = installmentsData.map(inst => ({
+								id: inst.id,
+								condition: inst.type,
+								value: Number(inst.amount_per_installment),
+								quantity: inst.installments_count,
+								date: inst.start_date,
+								totalAmount: inst.total_amount ? Number(inst.total_amount) : undefined
+							}))
+
+							const webhookResult = await sendFinancePartWebhook(
+								installments,
+								primaryContact.homio_id,
+								existingProposal.agency_id
+							)
+
+							if (!webhookResult.success) {
+								console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', webhookResult.message)
+							}
+						}
+					}
+				}
+			} catch (error) {
+				console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', error)
 			}
 		}
 
