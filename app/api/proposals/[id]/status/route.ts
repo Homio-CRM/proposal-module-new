@@ -155,7 +155,7 @@ export async function PATCH(
 					.update(updateData)
 					.eq('id', existingProposal.unit_id)
 					.eq('agency_id', existingProposal.agency_id)
-					.select('id, name, status')
+					.select('id, name, status, building_id')
 					.single()
 
 				if (unitUpdateError) {
@@ -181,10 +181,23 @@ export async function PATCH(
 					console.error('[PATCH /api/proposals/[id]/status] Unidade não encontrada após atualização')
 				} else {
 					const frontendStatus = mapStatusFromDB(updatedUnit.status as 'available' | 'reserved' | 'sold')
+					
+					let buildingName: string | undefined
+					if (updatedUnit.building_id) {
+						const { data: buildingData } = await supabaseAdmin
+							.from('buildings')
+							.select('name')
+							.eq('id', updatedUnit.building_id)
+							.single()
+						buildingName = buildingData?.name
+					}
+
 					const webhookResult = await sendUnitStatusWebhook(
 						updatedUnit.id,
 						updatedUnit.name,
-						frontendStatus
+						frontendStatus,
+						existingProposal.agency_id,
+						buildingName
 					)
 
 					if (!webhookResult.success) {

@@ -17,6 +17,7 @@ interface BuildingFormData {
   address: string
   city: string
   state: string
+  gid: string
 }
 
 export default function BuildingForm() {
@@ -26,7 +27,8 @@ export default function BuildingForm() {
     name: '',
     address: '',
     city: '',
-    state: ''
+    state: '',
+    gid: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -95,7 +97,8 @@ export default function BuildingForm() {
           address: formData.address.trim(),
           city: formData.city.trim(),
           state: formData.state.trim().toUpperCase(),
-          agency_id: userData.activeLocation
+          agency_id: userData.activeLocation,
+          gid: formData.gid.trim() ? parseInt(formData.gid.trim(), 10) : null
         })
         .select()
         .single()
@@ -260,6 +263,21 @@ export default function BuildingForm() {
                     <p className="text-sm text-red-600 mt-1">{errors.state}</p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="gid" className="block text-sm font-medium text-gray-700 mb-2">
+                  GID
+                </label>
+                <Input
+                  id="gid"
+                  type="number"
+                  value={formData.gid}
+                  onChange={(e) => handleInputChange('gid', e.target.value)}
+                  placeholder="ID da planilha (ex: 0)"
+                  disabled={isSubmitting}
+                />
+                <p className="text-xs text-gray-500 mt-1">ID da aba da planilha Google Sheets para exportação PDF</p>
               </div>
             </CardContent>
           </Card>

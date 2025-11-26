@@ -8,6 +8,7 @@ export interface Building {
   city: string
   state: string
   agency_id: string
+  gid: number | null
   created_at: string
   updated_at: string
 }

@@ -2,7 +2,7 @@ import { getSupabase } from '@/lib/supabaseClient'
 import { Building, Unit, BuildingWithUnits, BuildingListItem, UnitStatus, UnitStatusDB } from '@/lib/types/building'
 import { userCache, CACHE_KEYS } from '@/lib/cache/userCache'
 import { dataService } from './dataService'
-import { sendUnitStatusWebhook } from '@/lib/utils/unitWebhook'
+import { sendUnitStatusWebhook, sendUnitAmountWebhook, sendUnitCorrectionRateWebhook } from '@/lib/utils/unitWebhook'
 
 export function mapStatusFromDB(status: UnitStatusDB): UnitStatus {
   const statusMap: Record<UnitStatusDB, UnitStatus> = {
@@ -252,6 +252,7 @@ class BuildingService {
         city: buildingData.city,
         state: buildingData.state,
         agency_id: buildingData.agency_id,
+        gid: buildingData.gid ?? null,
         created_at: buildingData.created_at,
         updated_at: buildingData.updated_at,
         units,
@@ -313,6 +314,50 @@ class BuildingService {
 
       const updatedUnit = mapUnitDBRowToUnit(data as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
 
+      let buildingName: string | undefined
+      if (updates.gross_price_amount !== undefined || updates.price_correction_rate !== undefined) {
+        const { data: buildingData } = await supabase
+          .from('buildings')
+          .select('name')
+          .eq('id', data.building_id)
+          .single()
+        buildingName = buildingData?.name
+      }
+
+      if (updates.gross_price_amount !== undefined) {
+        const webhookResult = await sendUnitAmountWebhook(
+          updatedUnit.id,
+          updatedUnit.name,
+          updatedUnit.gross_price_amount,
+          data.agency_id,
+          buildingName
+        )
+
+        if (!webhookResult.success) {
+          const error = new Error('WEBHOOK_ERROR') as Error & { webhookError: boolean; webhookMessage?: string }
+          error.webhookError = true
+          error.webhookMessage = webhookResult.message
+          throw error
+        }
+      }
+
+      if (updates.price_correction_rate !== undefined) {
+        const webhookResult = await sendUnitCorrectionRateWebhook(
+          updatedUnit.id,
+          updatedUnit.name,
+          updatedUnit.price_correction_rate,
+          data.agency_id,
+          buildingName
+        )
+
+        if (!webhookResult.success) {
+          const error = new Error('WEBHOOK_ERROR') as Error & { webhookError: boolean; webhookMessage?: string }
+          error.webhookError = true
+          error.webhookMessage = webhookResult.message
+          throw error
+        }
+      }
+
       userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${data.building_id}_${data.agency_id}`)
       userCache.delete(`${CACHE_KEYS.LISTINGS}_buildings_${data.agency_id}`)
 
@@ -353,10 +398,18 @@ class BuildingService {
 
       const updatedUnit = mapUnitDBRowToUnit(data as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
 
+      const { data: buildingData } = await supabase
+        .from('buildings')
+        .select('name')
+        .eq('id', data.building_id)
+        .single()
+
       const webhookResult = await sendUnitStatusWebhook(
         updatedUnit.id,
         updatedUnit.name,
-        updatedUnit.status
+        updatedUnit.status,
+        data.agency_id,
+        buildingData?.name
       )
 
       if (!webhookResult.success) {
@@ -378,7 +431,7 @@ class BuildingService {
 
   async updateBuilding(
     buildingId: string, 
-    updates: { name?: string; address?: string; city?: string; state?: string }
+    updates: { name?: string; address?: string; city?: string; state?: string; gid?: number | null }
   ): Promise<Building> {
     try {
       const supabase = await getSupabase()
@@ -409,6 +462,7 @@ class BuildingService {
         city: data.city,
         state: data.state,
         agency_id: data.agency_id,
+        gid: data.gid ?? null,
         created_at: data.created_at,
         updated_at: data.updated_at
       }
@@ -580,6 +634,27 @@ class BuildingService {
         .eq('unit_id', unitId)
 
       const updatedUnit = mapUnitDBRowToUnit(unitData as UnitDBRow, (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
+
+      const { data: buildingData } = await supabase
+        .from('buildings')
+        .select('name')
+        .eq('id', unitData.building_id)
+        .single()
+
+      const webhookResult = await sendUnitCorrectionRateWebhook(
+        updatedUnit.id,
+        updatedUnit.name,
+        updatedUnit.price_correction_rate,
+        unitData.agency_id,
+        buildingData?.name
+      )
+
+      if (!webhookResult.success) {
+        const error = new Error('WEBHOOK_ERROR') as Error & { webhookError: boolean; webhookMessage?: string }
+        error.webhookError = true
+        error.webhookMessage = webhookResult.message
+        throw error
+      }
 
       userCache.delete(`${CACHE_KEYS.LISTINGS}_building_${unitData.building_id}_${unitData.agency_id}`)
       userCache.delete(`${CACHE_KEYS.LISTINGS}_buildings_${unitData.agency_id}`)

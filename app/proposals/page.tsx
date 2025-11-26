@@ -11,7 +11,7 @@ import { ProposalFilters, ProposalListItem } from "@/lib/types/proposal";
 import { dataService } from "@/lib/services/dataService";
 import { usePreferencesContext } from "@/lib/contexts/PreferencesContext";
 import { canManageProposals as canManageProposalsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from "@/lib/utils/permissions";
-import { Plus, Trash2, Settings, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function ProposalsPage() {
@@ -390,11 +390,6 @@ export default function ProposalsPage() {
                   </Button>
                 </Link>
               )}
-              <Link href="https://docs.google.com/spreadsheets/d/1IVEDwmmCk6MxxqoZqb8D-gW4fkwavVTyw8FRaokcuUM/edit?usp=sharing" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="icon">
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </Link>
             </div>
           </div>
 

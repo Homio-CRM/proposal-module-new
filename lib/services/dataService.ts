@@ -28,6 +28,7 @@ export interface AgencyConfig {
   contact_city: string | null
   contact_neighborhood: string | null
   contact_state: string | null
+  table_url: string | null
   created_at: string
   updated_at: string
 }
@@ -594,6 +595,7 @@ class DataService {
       bairro: string
       estado: string
     }
+    table_url?: string
   }): Promise<AgencyConfig | null> {
     try {
 
@@ -620,6 +622,7 @@ class DataService {
         contact_city: configData.contactFields.cidade || null,
         contact_neighborhood: configData.contactFields.bairro || null,
         contact_state: configData.contactFields.estado || null,
+        table_url: configData.table_url || null,
         updated_at: new Date().toISOString()
       }
 
@@ -776,6 +779,7 @@ class DataService {
       bairro: string
       estado: string
     }
+    table_url?: string
   }): Promise<{
     config: AgencyConfig | null
     customFieldIds: {

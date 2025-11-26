@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,9 +25,10 @@ interface BuildingDetailsProps {
   statusFilter?: UnitStatus | 'all'
   onStatusFilterChange?: (status: UnitStatus | 'all') => void
   canManage?: boolean
+  onBuildingUpdated?: (updatedBuilding: BuildingWithUnits) => void
 }
 
-export function BuildingDetails({ building, statusFilter = 'all', onStatusFilterChange, canManage = true }: BuildingDetailsProps) {
+export function BuildingDetails({ building, statusFilter = 'all', onStatusFilterChange, canManage = true, onBuildingUpdated }: BuildingDetailsProps) {
   const router = useRouter()
   const { userData } = useUserDataContext()
   const [openCreateUnit, setOpenCreateUnit] = useState(false)
@@ -37,6 +38,10 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
   const [unitToDelete, setUnitToDelete] = useState<string | null>(null)
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({})
   const [currentBuilding, setCurrentBuilding] = useState(building)
+
+  useEffect(() => {
+    setCurrentBuilding(building)
+  }, [building])
 
   const filteredUnits = useMemo(() => {
     const units = statusFilter === 'all' 
@@ -110,6 +115,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
     const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
     if (updatedBuilding) {
       setCurrentBuilding(updatedBuilding)
+      onBuildingUpdated?.(updatedBuilding)
     }
     setDeleteUnitDialogOpen(false)
     setUnitToDelete(null)
@@ -126,6 +132,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
       const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
       if (updatedBuilding) {
         setCurrentBuilding(updatedBuilding)
+        onBuildingUpdated?.(updatedBuilding)
       }
     } catch (error) {
       console.error('Erro ao atualizar status da unidade:', error)
@@ -139,6 +146,7 @@ export function BuildingDetails({ building, statusFilter = 'all', onStatusFilter
     const updatedBuilding = await buildingService.fetchBuildingWithUnits(currentBuilding.id, userData.activeLocation)
     if (updatedBuilding) {
       setCurrentBuilding(updatedBuilding)
+      onBuildingUpdated?.(updatedBuilding)
     }
   }
 

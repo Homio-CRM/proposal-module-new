@@ -80,6 +80,8 @@ export default function ConfigPage() {
     }
   })
   const [agencyConfig, setAgencyConfig] = useState<AgencyConfig | null>(null)
+  const [tableUrl, setTableUrl] = useState<string>('')
+  const [initialTableUrl, setInitialTableUrl] = useState<string>('')
   const [configLoading, setConfigLoading] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successType, setSuccessType] = useState<'permissions' | 'fields' | null>(null)
@@ -141,6 +143,9 @@ export default function ConfigPage() {
         }
 
         setAgencyConfig(config);
+        
+        setTableUrl(config.table_url || '');
+        setInitialTableUrl(config.table_url || '');
         
         // Preencher campos imediatamente
         const newConfigData = {
@@ -233,8 +238,8 @@ export default function ConfigPage() {
   }, [initialPreferences, preferencesForm])
 
   const hasFieldChanges = useMemo(() => {
-    return JSON.stringify(configData) !== JSON.stringify(initialConfigData)
-  }, [configData, initialConfigData])
+    return JSON.stringify(configData) !== JSON.stringify(initialConfigData) || tableUrl !== initialTableUrl
+  }, [configData, initialConfigData, tableUrl, initialTableUrl])
 
   const handleSavePermissions = async () => {
     if (!isAdmin || !userData?.activeLocation || !hasPreferenceChanges) {
@@ -271,12 +276,16 @@ export default function ConfigPage() {
 
       const result = await dataService.saveAgencyConfigAndRemapFields(
         userData.activeLocation,
-        configData
+        {
+          ...configData,
+          table_url: tableUrl
+        }
       )
 
       setAgencyConfig(result.config)
       setCustomFieldIds(result.customFieldIds)
       setInitialConfigData(JSON.parse(JSON.stringify(configData)))
+      setInitialTableUrl(tableUrl)
       setSuccessType('fields')
       setShowSuccessModal(true)
     } catch (error) {
@@ -812,6 +821,27 @@ export default function ConfigPage() {
                   </p>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>URL da Tabela</CardTitle>
+            <CardDescription>Configure o link da tabela que será usado no botão &quot;Ir para Tabela&quot; na página de propostas</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label htmlFor="table_url" className="block text-sm font-medium text-neutral-700 mb-2">
+                URL da Tabela
+              </label>
+              <Input
+                id="table_url"
+                type="url"
+                value={tableUrl}
+                onChange={(e) => setTableUrl(e.target.value)}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+              />
             </div>
           </CardContent>
         </Card>

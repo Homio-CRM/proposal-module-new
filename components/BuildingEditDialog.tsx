@@ -19,6 +19,7 @@ export default function BuildingEditDialog({ open, onOpenChange, building, onUpd
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
+  const [gid, setGid] = useState<string>('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
@@ -29,6 +30,7 @@ export default function BuildingEditDialog({ open, onOpenChange, building, onUpd
       setAddress(building.address || '')
       setCity(building.city || '')
       setState(building.state || '')
+      setGid(building.gid?.toString() || '')
     }
   }, [building])
 
@@ -53,7 +55,8 @@ export default function BuildingEditDialog({ open, onOpenChange, building, onUpd
         name: name.trim(),
         address: address.trim(),
         city: city.trim(),
-        state: state.trim()
+        state: state.trim(),
+        gid: gid.trim() ? parseInt(gid.trim(), 10) : null
       })
 
       onOpenChange(false)
@@ -73,6 +76,7 @@ export default function BuildingEditDialog({ open, onOpenChange, building, onUpd
       setAddress(building.address || '')
       setCity(building.city || '')
       setState(building.state || '')
+      setGid(building.gid?.toString() || '')
     }
     setErrors({})
     setFormError('')
@@ -146,6 +150,19 @@ export default function BuildingEditDialog({ open, onOpenChange, building, onUpd
                 <p className="text-sm text-red-600 mt-1">{errors.state}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="building-gid" className="block text-sm font-medium text-gray-700 mb-2">GID</label>
+            <Input 
+              id="building-gid" 
+              type="number"
+              value={gid} 
+              onChange={(e) => setGid(e.target.value)} 
+              disabled={submitting}
+              placeholder="ID da planilha (ex: 0)"
+            />
+            <p className="text-xs text-gray-500 mt-1">ID da aba da planilha Google Sheets para exportação PDF</p>
           </div>
 
           {formError && (
