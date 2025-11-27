@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 			unitId?: string
 			primaryContact: { homioId?: string; name: string }
 			secondaryContact?: { homioId?: string; name: string } | null
-			installments: Array<{ type: string; amountPerInstallment: number; installmentsCount: number; totalAmount: number; startDate: string }>
+			installments: Array<{ type: string; amountPerInstallment: number; installmentsCount: number; totalAmount: number; startDate?: string; dates?: string[] }>
 		}
 
 		const missing: string[] = []
@@ -187,13 +187,13 @@ export async function POST(req: NextRequest) {
 				amount_per_installment: i.amountPerInstallment,
 				installments_count: i.installmentsCount,
 				total_amount: i.totalAmount,
-				start_date: i.startDate,
 				proposal_id: proposal.id
 			}))
-			const { error: instErr } = await supabaseAdmin
+			const { data: insertedInstallments, error: instErr } = await supabaseAdmin
 				.from('installments')
 				.insert(payload)
-    if (instErr) {
+				.select('id, type')
+    if (instErr || !insertedInstallments) {
       return NextResponse.json({ 
         error: 'Failed to insert installments',
         supabase: {
@@ -204,6 +204,50 @@ export async function POST(req: NextRequest) {
         }
       }, { status: 500 })
     }
+
+			for (let i = 0; i < installments.length; i++) {
+				const installment = installments[i]
+				const insertedInstallment = insertedInstallments[i]
+				
+				if (installment.type === 'intermediarias' && installment.dates && installment.dates.length > 0) {
+					const datesPayload = installment.dates.map(date => ({
+						installment_id: insertedInstallment.id,
+						date: date
+					}))
+					const { error: datesErr } = await supabaseAdmin
+						.from('installments_dates')
+						.insert(datesPayload)
+					if (datesErr) {
+						return NextResponse.json({ 
+							error: 'Failed to insert installment dates',
+							supabase: {
+								message: datesErr?.message,
+								details: datesErr?.details,
+								hint: datesErr?.hint,
+								code: datesErr?.code
+							}
+						}, { status: 500 })
+					}
+				} else if (installment.startDate) {
+					const { error: dateErr } = await supabaseAdmin
+						.from('installments_dates')
+						.insert({
+							installment_id: insertedInstallment.id,
+							date: installment.startDate
+						})
+					if (dateErr) {
+						return NextResponse.json({ 
+							error: 'Failed to insert installment date',
+							supabase: {
+								message: dateErr?.message,
+								details: dateErr?.details,
+								hint: dateErr?.hint,
+								code: dateErr?.code
+							}
+						}, { status: 500 })
+					}
+				}
+			}
 		}
 
 		// Reservar unidade se shouldReserveUnit for true e reservedUntil estiver preenchido

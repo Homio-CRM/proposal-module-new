@@ -5,6 +5,7 @@ interface FinanceWebhookPayload {
     value: number
     quantity: number
     date: string
+    dates?: string[]
     totalAmount?: number
   }>
   mainContactId: string

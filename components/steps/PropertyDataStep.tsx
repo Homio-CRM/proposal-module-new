@@ -33,6 +33,7 @@ interface Unit {
   buildingName: string
   label: string
   status: string
+  currentValue?: number
 }
 
 type UnitRow = {
@@ -43,6 +44,8 @@ type UnitRow = {
   floor: string | null
   building_id: string
   status: string
+  gross_price_amount?: number | null
+  price_correction_rate?: number | null
   buildings?: { name?: string | null } | null
 }
 
@@ -90,7 +93,7 @@ export default function PropertyDataStep({
         
         const { data: unitsData } = await supabase
           .from('units')
-          .select('id, name, number, tower, floor, building_id, status, buildings(name)')
+          .select('id, name, number, tower, floor, building_id, status, gross_price_amount, price_correction_rate, buildings(name)')
           .eq('agency_id', userData.activeLocation)
           .order('number', { ascending: true })
         
@@ -103,6 +106,9 @@ export default function PropertyDataStep({
           const mapped: Unit[] = rows
             .map(u => {
               const buildingName = u.buildings?.name ?? ''
+              const grossPrice = u.gross_price_amount ?? 0
+              const correctionRate = u.price_correction_rate ?? 0
+              const currentValue = grossPrice * (1 + correctionRate)
               return {
                 id: u.id,
                 name: u.name ?? '',
@@ -112,7 +118,8 @@ export default function PropertyDataStep({
                 buildingId: u.building_id,
                 buildingName,
                 label: u.name ?? u.number,
-                status: u.status
+                status: u.status,
+                currentValue: currentValue > 0 ? currentValue : undefined
               }
             })
           setAllUnits(mapped)
@@ -209,7 +216,8 @@ export default function PropertyDataStep({
         tower: selected.tower || '',
         floor: selected.floor || '',
         development: selected.buildingName,
-        buildingId: selected.buildingId
+        buildingId: selected.buildingId,
+        unitValue: selected.currentValue
       }
       
       setFormData(next)

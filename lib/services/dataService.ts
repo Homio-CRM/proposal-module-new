@@ -10,13 +10,12 @@ export interface AgencyConfig {
   opportunity_name: string
   opportunity_building: string | null
   opportunity_unit: string | null
+  opportunity_floor: string | null
+  opportunity_tower: string | null
+  opportunity_parking_spots: string | null
   opportunity_responsible: string | null
   opportunity_observations: string | null
   opportunity_reserve_until: string | null
-  contact_building: string | null
-  contact_unit: string | null
-  contact_floor: string | null
-  contact_tower: string | null
   contact_cpf: string | null
   contact_rg: string | null
   contact_rg_issuer: string | null
@@ -269,10 +268,34 @@ class DataService {
         .from('installments')
         .select('*')
         .eq('proposal_id', proposalId)
-        .order('start_date', { ascending: true })
+        .order('created_at', { ascending: true })
 
       if (installmentsError) {
         throw new Error(`Erro ao buscar parcelas: ${installmentsError.message}`)
+      }
+
+      // Buscar datas das parcelas
+      const installmentIds = (installmentsData || []).map(i => i.id)
+      let installmentsDatesMap: Record<string, string[]> = {}
+      
+      if (installmentIds.length > 0) {
+        const { data: datesData, error: datesError } = await supabase
+          .from('installments_dates')
+          .select('installment_id, date')
+          .in('installment_id', installmentIds)
+          .order('date', { ascending: true })
+
+        if (datesError) {
+          throw new Error(`Erro ao buscar datas das parcelas: ${datesError.message}`)
+        }
+
+        // Agrupar datas por installment_id
+        (datesData || []).forEach((dateRow: { installment_id: string; date: string }) => {
+          if (!installmentsDatesMap[dateRow.installment_id]) {
+            installmentsDatesMap[dateRow.installment_id] = []
+          }
+          installmentsDatesMap[dateRow.installment_id].push(dateRow.date)
+        })
       }
 
       // Mapear para ProposalFormData
@@ -319,13 +342,19 @@ class DataService {
           unitStatus: proposalData.unit?.status || '',
           shouldReserveUnit: !!proposalData.reserved_until
         },
-        installments: (installmentsData || []).map((installment) => ({
-          id: installment.id,
-          condition: this.mapInstallmentType(installment.type),
-          value: Number(installment.amount_per_installment),
-          quantity: installment.installments_count,
-          date: installment.start_date
-        }))
+        installments: (installmentsData || []).map((installment) => {
+          const dates = installmentsDatesMap[installment.id] || []
+          const isIntermediarias = installment.type === 'intermediarias'
+          
+          return {
+            id: installment.id,
+            condition: this.mapInstallmentType(installment.type),
+            value: Number(installment.amount_per_installment),
+            quantity: installment.installments_count,
+            date: isIntermediarias ? (dates[0] || '') : (dates[0] || ''),
+            dates: isIntermediarias ? dates : undefined
+          }
+        })
       }
 
       // Adicionar contato secundário se existir
@@ -574,15 +603,14 @@ class DataService {
     opportunityFields: {
       empreendimento: string
       unidade: string
+      andar: string
+      torre: string
+      vagas: string
       responsavel: string
       observacoes: string
       reserve_until: string
     }
     contactFields: {
-      empreendimento: string
-      unidade: string
-      andar: string
-      torre: string
       cpf: string
       rg: string
       orgaoEmissor: string
@@ -604,13 +632,12 @@ class DataService {
       const updateData = {
         opportunity_building: configData.opportunityFields.empreendimento || null,
         opportunity_unit: configData.opportunityFields.unidade || null,
+        opportunity_floor: configData.opportunityFields.andar || null,
+        opportunity_tower: configData.opportunityFields.torre || null,
+        opportunity_parking_spots: configData.opportunityFields.vagas || null,
         opportunity_responsible: configData.opportunityFields.responsavel || null,
         opportunity_observations: configData.opportunityFields.observacoes || null,
         opportunity_reserve_until: configData.opportunityFields.reserve_until || null,
-        contact_building: configData.contactFields.empreendimento || null,
-        contact_unit: configData.contactFields.unidade || null,
-        contact_floor: configData.contactFields.andar || null,
-        contact_tower: configData.contactFields.torre || null,
         contact_cpf: configData.contactFields.cpf || null,
         contact_rg: configData.contactFields.rg || null,
         contact_rg_issuer: configData.contactFields.orgaoEmissor || null,
@@ -658,16 +685,15 @@ class DataService {
     const opportunityKeys = [
       config.opportunity_building,
       config.opportunity_unit,
+      config.opportunity_floor,
+      config.opportunity_tower,
+      config.opportunity_parking_spots,
       config.opportunity_responsible,
       config.opportunity_observations,
       config.opportunity_reserve_until
     ].filter(key => key && key.trim())
 
     const contactKeys = [
-      config.contact_building,
-      config.contact_unit,
-      config.contact_floor,
-      config.contact_tower,
       config.contact_cpf,
       config.contact_rg,
       config.contact_rg_issuer,
@@ -716,16 +742,15 @@ class DataService {
     const opportunityKeys = [
       config.opportunity_building,
       config.opportunity_unit,
+      config.opportunity_floor,
+      config.opportunity_tower,
+      config.opportunity_parking_spots,
       config.opportunity_responsible,
       config.opportunity_observations,
       config.opportunity_reserve_until
     ].filter(key => key && key.trim())
 
     const contactKeys = [
-      config.contact_building,
-      config.contact_unit,
-      config.contact_floor,
-      config.contact_tower,
       config.contact_cpf,
       config.contact_rg,
       config.contact_rg_issuer,
@@ -758,15 +783,14 @@ class DataService {
     opportunityFields: {
       empreendimento: string
       unidade: string
+      andar: string
+      torre: string
+      vagas: string
       responsavel: string
       observacoes: string
       reserve_until: string
     }
     contactFields: {
-      empreendimento: string
-      unidade: string
-      andar: string
-      torre: string
       cpf: string
       rg: string
       orgaoEmissor: string

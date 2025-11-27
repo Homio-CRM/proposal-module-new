@@ -344,17 +344,30 @@ export function ProposalDetails({ data, locationId }: ProposalDetailsProps) {
                         </div>
                       </div>
                       
-                      {/* Data */}
+                      {/* Data(s) */}
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                          Data
+                          {installment.condition === 'intermediarias' && installment.dates && installment.dates.length > 1 ? 'Datas' : 'Data'}
                         </label>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-gray-500" />
-                          <span className="text-lg font-semibold text-gray-900">
-                            {formatDate(installment.date)}
-                          </span>
-                        </div>
+                        {installment.condition === 'intermediarias' && installment.dates && installment.dates.length > 1 ? (
+                          <div className="space-y-2">
+                            {installment.dates.map((date, dateIndex) => (
+                              <div key={dateIndex} className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-gray-500" />
+                                <span className="text-sm font-semibold text-gray-900">
+                                  Parcela {dateIndex + 1}: {formatDate(date)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-gray-500" />
+                            <span className="text-lg font-semibold text-gray-900">
+                              {formatDate(installment.date)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     

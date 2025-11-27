@@ -130,7 +130,10 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
     tower: '',
     reservedUntil: '',
     observations: '',
-    shouldReserveUnit: true
+    shouldReserveUnit: true,
+    buildingId: undefined,
+    unitId: undefined,
+    unitValue: undefined
   }
   const [formData, setFormData] = useState<ProposalFormData>(
     initialData || {
@@ -395,8 +398,20 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
             if (!installment.quantity || installment.quantity <= 0) {
               errors[`installments.${index}.quantity`] = 'Quantidade deve ser maior que zero'
             }
-            if (!installment.date) {
-              errors[`installments.${index}.date`] = 'Data é obrigatória'
+            if (installment.condition === 'intermediarias') {
+              if (!installment.dates || installment.dates.length !== installment.quantity) {
+                errors[`installments.${index}.dates`] = 'Todas as datas das parcelas intermediárias são obrigatórias'
+              } else {
+                installment.dates.forEach((date, dateIndex) => {
+                  if (!date || date.trim() === '') {
+                    errors[`installments.${index}.date-${dateIndex}`] = `Data da parcela ${dateIndex + 1} é obrigatória`
+                  }
+                })
+              }
+            } else {
+              if (!installment.date) {
+                errors[`installments.${index}.date`] = 'Data é obrigatória'
+              }
             }
           })
         }
@@ -499,12 +514,20 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
       
       case 5: // Payment Installments
         return formData.installments.length > 0 && 
-               formData.installments.every(installment => 
-                 installment.condition &&
-                 installment.value > 0 &&
-                 installment.quantity > 0 &&
-                 installment.date
-               )
+               formData.installments.every(installment => {
+                 const basicValid = installment.condition &&
+                   installment.value > 0 &&
+                   installment.quantity > 0
+                 
+                 if (installment.condition === 'intermediarias') {
+                   return basicValid &&
+                     installment.dates &&
+                     installment.dates.length === installment.quantity &&
+                     installment.dates.every(date => date && date.trim() !== '')
+                 }
+                 
+                 return basicValid && installment.date
+               })
       
       case 6: // Summary - valid only if all previous steps are valid
         return isStepValid(1) && isStepValid(2) && isStepValid(3) && isStepValid(4) && isStepValid(5)
@@ -735,9 +758,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
     setValidationErrors({})
 
     try {
-      // Buscar configuração da agência para obter os IDs dos custom fields
-      const agencyConfig = await dataService.fetchAgencyConfig(userData.activeLocation)
-      
       // Preparar dados dos contatos para update
       const prepareContactData = (contact: ContactData & { customFields?: Array<{ id: string; value?: string; fieldValueString?: string; fieldValueLabel?: string; fieldValueFormatted?: string }> }) => {
         const customFields = contact.customFields ? contact.customFields.map((field) => ({
@@ -780,41 +800,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
             }
           }
         })
-
-        // Adicionar custom fields de empreendimento, unidade, andar e torre
-        if (formData.property && agencyConfig) {
-          // Adicionar empreendimento
-          if (agencyConfig.contact_building && formData.property.development) {
-            customFields.push({
-              id: agencyConfig.contact_building,
-              field_value: formData.property.development
-            })
-          }
-          
-          // Adicionar unidade
-          if (agencyConfig.contact_unit && formData.property.unit) {
-            customFields.push({
-              id: agencyConfig.contact_unit,
-              field_value: formData.property.unit
-            })
-          }
-          
-          // Adicionar andar
-          if (agencyConfig.contact_floor && formData.property.floor) {
-            customFields.push({
-              id: agencyConfig.contact_floor,
-              field_value: formData.property.floor
-            })
-          }
-          
-          // Adicionar torre
-          if (agencyConfig.contact_tower && formData.property.tower) {
-            customFields.push({
-              id: agencyConfig.contact_tower,
-              field_value: formData.property.tower
-            })
-          }
-        }
 
         return {
           name: contact.name,
@@ -877,6 +862,7 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         unidade: formData.property.unit ? formData.property.unit.trim() : undefined,
         andar: formData.property.floor ? formData.property.floor.trim() : undefined,
         torre: formData.property.tower ? formData.property.tower.trim() : undefined,
+        vagas: formData.property.parkingSpots ? formData.property.parkingSpots.toString().trim() : undefined,
         observacoes: formData.property.observations ? formData.property.observations.trim() : undefined
       }
 
@@ -943,7 +929,8 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
           amountPerInstallment: i.value,
           installmentsCount: i.quantity,
           totalAmount: i.value * i.quantity,
-          startDate: i.date
+          startDate: i.condition === 'intermediarias' ? undefined : i.date,
+          dates: i.condition === 'intermediarias' ? (i.dates || []) : undefined
         }))
       }
 
@@ -1077,6 +1064,7 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
             data={formData.installments}
             onDataChange={(data) => handleStepDataChange(5, data)}
             errors={validationErrors}
+            unitValue={formData.property.unitValue}
           />
         )
       case 6:

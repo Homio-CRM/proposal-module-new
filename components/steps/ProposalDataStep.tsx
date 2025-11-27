@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { CustomDatePicker } from '@/components/ui/date-picker'
 import { parseISODateToLocal } from '@/lib/utils/date'
@@ -112,6 +112,9 @@ export default function ProposalDataStep({
 }: ProposalDataStepProps) {
   const [formData, setFormData] = useState<ProposalData>(data)
   
+  useEffect(() => {
+    setFormData(data)
+  }, [data])
   
   const [opportunityError, setOpportunityError] = useState<string>('')
   const [isSearchingOpportunity, setIsSearchingOpportunity] = useState(false)
@@ -119,9 +122,9 @@ export default function ProposalDataStep({
   const { getAllMappings } = useCustomFieldsContext()
   
   
-
   
 
+  
   const handleInputChange = (field: keyof ProposalData, value: string) => {
     const newData = { ...formData, [field]: value }
     setFormData(newData)
@@ -273,7 +276,7 @@ export default function ProposalDataStep({
                           
                           const { data: unitData } = await supabase
                             .from('units')
-                            .select('id, name, number, status')
+                            .select('id, name, number, status, tower, floor, gross_price_amount, price_correction_rate')
                             .eq('agency_id', locationId)
                             .eq('building_id', propertyData.buildingId)
                             .or(`name.ilike.%${propertyData.unit}%,number.ilike.%${propertyData.unit}%`)
@@ -282,7 +285,20 @@ export default function ProposalDataStep({
                           // Log removido para simplificar
                           
                           if (unitData && unitData.length > 0) {
-                            propertyData.unitId = unitData[0].id
+                            const unit = unitData[0]
+                            propertyData.unitId = unit.id
+                            if (unit.tower && typeof unit.tower === 'string' && unit.tower.trim() !== '') {
+                              propertyData.tower = unit.tower.trim()
+                            }
+                            if (unit.floor && typeof unit.floor === 'string' && unit.floor.trim() !== '') {
+                              propertyData.floor = unit.floor.trim()
+                            }
+                            const grossPrice = typeof unit.gross_price_amount === 'number' ? unit.gross_price_amount : parseFloat(String(unit.gross_price_amount || 0)) || 0
+                            const correctionRate = typeof unit.price_correction_rate === 'number' ? unit.price_correction_rate : parseFloat(String(unit.price_correction_rate || 0)) || 0
+                            const currentValue = grossPrice * (1 + correctionRate)
+                            if (currentValue > 0) {
+                              propertyData.unitValue = currentValue
+                            }
                             // Log removido para simplificar
                           } else {
                             // Log removido para simplificar

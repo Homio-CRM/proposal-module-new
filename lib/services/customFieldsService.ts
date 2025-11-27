@@ -73,6 +73,9 @@ class CustomFieldsService {
         'unidade': 'unidade', 
         'andar': 'andar',
         'torre': 'torre',
+        'parking_spots': 'vagas',
+        'parkingSpots': 'vagas',
+        'vagas': 'vagas',
         'responsible': 'responsavel',
         'opportunityresponsavel': 'responsavel',
         'observations': 'observacoes',
@@ -97,11 +100,7 @@ class CustomFieldsService {
         'endereco': 'endereco',
         'cidade': 'cidade',
         'bairro': 'bairro',
-        'estado': 'estado',
-        'unidade_do_empreendimento': 'unidade',
-        'pavimento': 'andar',
-        'torre': 'torre',
-        'empreendimento': 'empreendimento'
+        'estado': 'estado'
       }
 
       // Processar opportunity fields

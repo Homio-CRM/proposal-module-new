@@ -68,7 +68,8 @@ export async function PUT(
 				amountPerInstallment: number
 				installmentsCount: number
 				totalAmount: number
-				startDate: string
+				startDate?: string
+				dates?: string[]
 			}>
 		}
 
@@ -194,15 +195,15 @@ export async function PUT(
 				amount_per_installment: i.amountPerInstallment,
 				installments_count: i.installmentsCount,
 				total_amount: i.totalAmount,
-				start_date: i.startDate,
 				proposal_id: proposalId
 			}))
 
-			const { error: instErr } = await supabaseAdmin
+			const { data: insertedInstallments, error: instErr } = await supabaseAdmin
 				.from('installments')
 				.insert(payload)
+				.select('id, type')
 
-			if (instErr) {
+			if (instErr || !insertedInstallments) {
 				return NextResponse.json({ 
 					error: 'Erro ao inserir parcelas',
 					supabase: {
@@ -212,6 +213,50 @@ export async function PUT(
 						code: instErr?.code
 					}
 				}, { status: 500 })
+			}
+
+			for (let i = 0; i < installments.length; i++) {
+				const installment = installments[i]
+				const insertedInstallment = insertedInstallments[i]
+				
+				if (installment.type === 'intermediarias' && installment.dates && installment.dates.length > 0) {
+					const datesPayload = installment.dates.map(date => ({
+						installment_id: insertedInstallment.id,
+						date: date
+					}))
+					const { error: datesErr } = await supabaseAdmin
+						.from('installments_dates')
+						.insert(datesPayload)
+					if (datesErr) {
+						return NextResponse.json({ 
+							error: 'Erro ao inserir datas das parcelas intermediárias',
+							supabase: {
+								message: datesErr?.message,
+								details: datesErr?.details,
+								hint: datesErr?.hint,
+								code: datesErr?.code
+							}
+						}, { status: 500 })
+					}
+				} else if (installment.startDate) {
+					const { error: dateErr } = await supabaseAdmin
+						.from('installments_dates')
+						.insert({
+							installment_id: insertedInstallment.id,
+							date: installment.startDate
+						})
+					if (dateErr) {
+						return NextResponse.json({ 
+							error: 'Erro ao inserir data da parcela',
+							supabase: {
+								message: dateErr?.message,
+								details: dateErr?.details,
+								hint: dateErr?.hint,
+								code: dateErr?.code
+							}
+						}, { status: 500 })
+					}
+				}
 			}
 		}
 

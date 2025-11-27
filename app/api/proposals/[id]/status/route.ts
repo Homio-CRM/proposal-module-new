@@ -320,19 +320,47 @@ export async function PATCH(
 					if (primaryContact?.homio_id) {
 						const { data: installmentsData, error: installmentsError } = await supabaseAdmin
 							.from('installments')
-							.select('id, type, amount_per_installment, installments_count, start_date, total_amount')
+							.select('id, type, amount_per_installment, installments_count, total_amount')
 							.eq('proposal_id', proposalId)
-							.order('start_date', { ascending: true })
+							.order('created_at', { ascending: true })
 
 						if (!installmentsError && installmentsData && installmentsData.length > 0) {
-							const installments = installmentsData.map(inst => ({
-								id: inst.id,
-								condition: inst.type,
-								value: Number(inst.amount_per_installment),
-								quantity: inst.installments_count,
-								date: inst.start_date,
-								totalAmount: inst.total_amount ? Number(inst.total_amount) : undefined
-							}))
+							const installmentIds = installmentsData.map(inst => inst.id)
+							
+							const { data: datesData, error: datesError } = await supabaseAdmin
+								.from('installments_dates')
+								.select('installment_id, date')
+								.in('installment_id', installmentIds)
+								.order('date', { ascending: true })
+
+							if (datesError) {
+								console.error('[PATCH /api/proposals/[id]/status] Erro ao buscar datas das parcelas:', datesError)
+							}
+
+							const datesMap: Record<string, string[]> = {}
+							if (datesData) {
+								datesData.forEach((dateRow: { installment_id: string; date: string }) => {
+									if (!datesMap[dateRow.installment_id]) {
+										datesMap[dateRow.installment_id] = []
+									}
+									datesMap[dateRow.installment_id].push(dateRow.date)
+								})
+							}
+
+							const installments = installmentsData.map(inst => {
+								const dates = datesMap[inst.id] || []
+								const isIntermediarias = inst.type === 'intermediarias'
+								
+								return {
+									id: inst.id,
+									condition: inst.type,
+									value: Number(inst.amount_per_installment),
+									quantity: inst.installments_count,
+									date: dates[0] || '',
+									dates: isIntermediarias ? dates : undefined,
+									totalAmount: inst.total_amount ? Number(inst.total_amount) : undefined
+								}
+							})
 
 							const webhookResult = await sendFinancePartWebhook(
 								installments,

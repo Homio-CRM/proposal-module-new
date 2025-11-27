@@ -100,6 +100,24 @@ export default function AdditionalContactStep({
   useEffect(() => {
     if (data) {
       setFormData(data)
+    } else {
+      setFormData({
+        name: '',
+        cpf: '',
+        rg: '',
+        rgIssuer: '',
+        nationality: '',
+        maritalStatus: '',
+        birthDate: '',
+        email: '',
+        phone: '',
+        address: '',
+        zipCode: '',
+        city: '',
+        neighborhood: '',
+        state: '',
+        profession: ''
+      })
     }
   }, [data])
 

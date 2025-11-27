@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CustomDatePicker } from '@/components/ui/date-picker'
+import { FormattedInput } from '@/components/ui/formatted-input'
 import { parseISODateToLocal } from '@/lib/utils/date'
 import { 
   Plus, 
@@ -20,6 +21,7 @@ interface PaymentInstallmentsStepProps {
   data: PaymentInstallment[]
   onDataChange: (data: PaymentInstallment[]) => void
   errors?: Record<string, string>
+  unitValue?: number
 }
 
 const PAYMENT_CONDITIONS: { value: PaymentCondition; label: string }[] = [
@@ -36,10 +38,31 @@ const PAYMENT_CONDITIONS: { value: PaymentCondition; label: string }[] = [
 
 const generateId = () => Math.random().toString(36).substr(2, 9)
 
+const formatCurrencyInput = (value: string): string => {
+  const numbersOnly = value.replace(/\D/g, '')
+  
+  if (numbersOnly === '') return ''
+  
+  const cents = parseInt(numbersOnly, 10)
+  const reais = Math.floor(cents / 100)
+  const centavos = cents % 100
+  
+  const formattedReais = reais.toLocaleString('pt-BR')
+  
+  return `${formattedReais},${centavos.toString().padStart(2, '0')}`
+}
+
+const parseCurrencyInput = (value: string): number => {
+  const numbersOnly = value.replace(/\D/g, '')
+  if (numbersOnly === '') return 0
+  return parseFloat(numbersOnly) / 100
+}
+
 export default function PaymentInstallmentsStep({ 
   data, 
   onDataChange,
-  errors = {}
+  errors = {},
+  unitValue
 }: PaymentInstallmentsStepProps) {
   const [installments, setInstallments] = useState<PaymentInstallment[]>(data)
   
@@ -57,7 +80,8 @@ export default function PaymentInstallmentsStep({
       condition: 'sinal',
       value: 0,
       quantity: 1,
-      date: ''
+      date: '',
+      dates: []
     }
     
     const updatedInstallments = [...installments, newInstallment]
@@ -80,11 +104,28 @@ export default function PaymentInstallmentsStep({
   }
 
   const updateInstallment = (id: string, field: keyof PaymentInstallment, value: string | number) => {
-    const updatedInstallments = installments.map(installment => 
-      installment.id === id 
-        ? { ...installment, [field]: value }
-        : installment
-    )
+    const updatedInstallments = installments.map(installment => {
+      if (installment.id === id) {
+        const updated = { ...installment, [field]: value }
+        
+        if (field === 'condition' && value === 'intermediarias') {
+          updated.dates = Array(updated.quantity || 1).fill('')
+        } else if (field === 'condition' && value !== 'intermediarias') {
+          updated.dates = []
+        } else if (field === 'quantity' && installment.condition === 'intermediarias') {
+          const currentDates = installment.dates || []
+          const newQuantity = typeof value === 'number' ? value : parseInt(String(value)) || 1
+          if (newQuantity > currentDates.length) {
+            updated.dates = [...currentDates, ...Array(newQuantity - currentDates.length).fill('')]
+          } else {
+            updated.dates = currentDates.slice(0, newQuantity)
+          }
+        }
+        
+        return updated
+      }
+      return installment
+    })
     setInstallments(updatedInstallments)
     onDataChange(updatedInstallments)
     
@@ -94,6 +135,19 @@ export default function PaymentInstallmentsStep({
       const newErrors = { ...errors }
       delete newErrors[errorKey]
     }
+  }
+
+  const updateInstallmentDate = (id: string, dateIndex: number, date: string) => {
+    const updatedInstallments = installments.map(installment => {
+      if (installment.id === id && installment.condition === 'intermediarias') {
+        const dates = [...(installment.dates || [])]
+        dates[dateIndex] = date
+        return { ...installment, dates }
+      }
+      return installment
+    })
+    setInstallments(updatedInstallments)
+    onDataChange(updatedInstallments)
   }
 
   const calculateTotal = (): number => {
@@ -255,13 +309,15 @@ export default function PaymentInstallmentsStep({
                     <label className="block text-sm font-medium text-neutral-700 mb-2">
                       Valor da Parcela *
                     </label>
-                    <Input
-                      type="number"
-                      value={installment.value || ''}
-                      onChange={(e) => updateInstallment(installment.id, 'value', parseFloat(e.target.value) || 0)}
+                    <FormattedInput
+                      type="text"
+                      value={installment.value ? formatCurrencyInput((installment.value * 100).toString()) : ''}
+                      onChange={(e) => {
+                        const numericValue = parseCurrencyInput(e.target.value)
+                        updateInstallment(installment.id, 'value', numericValue)
+                      }}
+                      format={formatCurrencyInput}
                       placeholder="0,00"
-                      min="0"
-                      step="0.01"
                       className={errors[`${installment.id}-value`] ? 'border-accent-500' : ''}
                     />
                     {errors[`${installment.id}-value`] && (
@@ -290,23 +346,56 @@ export default function PaymentInstallmentsStep({
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      Data *
-                    </label>
-                    <CustomDatePicker
-                      value={parseISODateToLocal(installment.date)}
-                      onChange={(date) => updateInstallment(installment.id, 'date', date ? date.toISOString().split('T')[0] : '')}
-                      placeholder="Selecione a data"
-                      minDate={new Date()}
-                      error={!!errors[`${installment.id}-date`]}
-                    />
-                    {errors[`${installment.id}-date`] && (
-                      <p className="text-sm text-accent-600 mt-1">
-                        {errors[`${installment.id}-date`]}
-                      </p>
-                    )}
-                  </div>
+                  {installment.condition === 'intermediarias' ? (
+                    <div className="xl:col-span-4">
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        Datas das Parcelas Intermediárias *
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {Array.from({ length: installment.quantity || 1 }).map((_, dateIndex) => {
+                          const dates = installment.dates || []
+                          const dateValue = dates[dateIndex] || ''
+                          return (
+                            <div key={dateIndex}>
+                              <label className="block text-xs text-neutral-600 mb-1">
+                                Parcela {dateIndex + 1}
+                              </label>
+                              <CustomDatePicker
+                                value={parseISODateToLocal(dateValue)}
+                                onChange={(date) => updateInstallmentDate(installment.id, dateIndex, date ? date.toISOString().split('T')[0] : '')}
+                                placeholder={`Data parcela ${dateIndex + 1}`}
+                                minDate={new Date()}
+                                error={!!errors[`${installment.id}-date-${dateIndex}`]}
+                              />
+                              {errors[`${installment.id}-date-${dateIndex}`] && (
+                                <p className="text-sm text-accent-600 mt-1">
+                                  {errors[`${installment.id}-date-${dateIndex}`]}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-2">
+                        Data *
+                      </label>
+                      <CustomDatePicker
+                        value={parseISODateToLocal(installment.date)}
+                        onChange={(date) => updateInstallment(installment.id, 'date', date ? date.toISOString().split('T')[0] : '')}
+                        placeholder="Selecione a data"
+                        minDate={new Date()}
+                        error={!!errors[`${installment.id}-date`]}
+                      />
+                      {errors[`${installment.id}-date`] && (
+                        <p className="text-sm text-accent-600 mt-1">
+                          {errors[`${installment.id}-date`]}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Subtotal for this installment */}
@@ -347,26 +436,61 @@ export default function PaymentInstallmentsStep({
       {installments.length > 0 && (
         <Card className="bg-primary-50 border-primary-200">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Calculator className="h-6 w-6 text-primary-600" />
-                <div>
-                  <h4 className="text-lg font-semibold text-primary-900">
-                    Valor Total da Proposta
-                  </h4>
-                  <p className="text-sm text-primary-700">
-                    Soma de todas as parcelas configuradas
-                  </p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Calculator className="h-6 w-6 text-primary-600" />
+                  <div>
+                    <h4 className="text-lg font-semibold text-primary-900">
+                      Valor Total da Proposta
+                    </h4>
+                    <p className="text-sm text-primary-700">
+                      Soma de todas as parcelas configuradas
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary-900">
+                    {formatCurrency(calculateTotal())}
+                  </div>
+                  <div className="text-sm text-primary-700">
+                    {installments.length} parcela{installments.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-primary-900">
-                  {formatCurrency(calculateTotal())}
+              {unitValue !== undefined && unitValue !== null && unitValue > 0 && (
+                <div className="pt-4 border-t border-primary-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <h5 className="text-base font-medium text-primary-900">
+                          Valor Atual da Unidade
+                        </h5>
+                        <p className="text-sm text-primary-700">
+                          Valor de referência da unidade selecionada
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-semibold text-primary-800">
+                        {formatCurrency(unitValue)}
+                      </div>
+                      {calculateTotal() !== unitValue && (
+                        <div className={`text-sm font-medium mt-1 ${
+                          calculateTotal() > unitValue 
+                            ? 'text-green-700' 
+                            : 'text-red-700'
+                        }`}>
+                          {calculateTotal() > unitValue 
+                            ? `+${formatCurrency(calculateTotal() - unitValue)} acima`
+                            : `${formatCurrency(unitValue - calculateTotal())} abaixo`
+                          }
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-primary-700">
-                  {installments.length} parcela{installments.length !== 1 ? 's' : ''}
-                </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>

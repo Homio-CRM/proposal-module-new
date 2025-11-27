@@ -11,7 +11,8 @@
     "build": "next build",
     "build:production": "NODE_ENV=production next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate-types": "npx supabase gen types typescript --project-id fvspjcxnmmifaglewpob > database.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",

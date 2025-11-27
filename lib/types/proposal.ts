@@ -37,12 +37,14 @@ export interface PropertyData {
   unit: string
   floor?: string
   tower?: string
+  parkingSpots?: number
   reservedUntil?: string
   observations: string
   unitId?: string
   buildingId?: string
   unitStatus?: string
   shouldReserveUnit?: boolean
+  unitValue?: number
 }
 
 export type PaymentCondition =
@@ -62,6 +64,7 @@ export interface PaymentInstallment {
   value: number
   quantity: number
   date: string
+  dates?: string[]
 }
 
 export interface ProposalFormData {

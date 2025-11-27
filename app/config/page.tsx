@@ -20,15 +20,14 @@ interface ConfigData {
   opportunityFields: {
     empreendimento: string
     unidade: string
+    andar: string
+    torre: string
+    vagas: string
     responsavel: string
     observacoes: string
     reserve_until: string
   }
   contactFields: {
-    empreendimento: string
-    unidade: string
-    andar: string
-    torre: string
     cpf: string
     rg: string
     orgaoEmissor: string
@@ -57,15 +56,14 @@ export default function ConfigPage() {
     opportunityFields: {
       empreendimento: '',
       unidade: '',
+      andar: '',
+      torre: '',
+      vagas: '',
       responsavel: '',
       observacoes: '',
       reserve_until: ''
     },
     contactFields: {
-      empreendimento: '',
-      unidade: '',
-      andar: '',
-      torre: '',
       cpf: '',
       rg: '',
       orgaoEmissor: '',
@@ -91,15 +89,14 @@ export default function ConfigPage() {
     opportunityFields: {
       empreendimento: '',
       unidade: '',
+      andar: '',
+      torre: '',
+      vagas: '',
       responsavel: '',
       observacoes: '',
       reserve_until: ''
     },
     contactFields: {
-      empreendimento: '',
-      unidade: '',
-      andar: '',
-      torre: '',
       cpf: '',
       rg: '',
       orgaoEmissor: '',
@@ -152,15 +149,14 @@ export default function ConfigPage() {
           opportunityFields: {
             empreendimento: config.opportunity_building || '',
             unidade: config.opportunity_unit || '',
+            andar: config.opportunity_floor || '',
+            torre: config.opportunity_tower || '',
+            vagas: config.opportunity_parking_spots || '',
             responsavel: config.opportunity_responsible || '',
             observacoes: config.opportunity_observations || '',
             reserve_until: config.opportunity_reserve_until || ''
           },
           contactFields: {
-            empreendimento: config.contact_building || '',
-            unidade: config.contact_unit || '',
-            andar: config.contact_floor || '',
-            torre: config.contact_tower || '',
             cpf: config.contact_cpf || '',
             rg: config.contact_rg || '',
             orgaoEmissor: config.contact_rg_issuer || '',
@@ -523,6 +519,54 @@ export default function ConfigPage() {
                 )}
               </div>
               <div>
+                <label htmlFor="andar" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Andar
+                </label>
+                <Input
+                  id="andar"
+                  value={configData.opportunityFields.andar}
+                  onChange={(e) => handleInputChange('opportunityFields', 'andar', e.target.value)}
+                  placeholder="Campo para andar"
+                />
+                {(configData.opportunityFields.andar || getCustomFieldId('opportunityFields', 'andar')) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ID: {getCustomFieldId('opportunityFields', 'andar') || 'ID não encontrado'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="torre" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Torre
+                </label>
+                <Input
+                  id="torre"
+                  value={configData.opportunityFields.torre}
+                  onChange={(e) => handleInputChange('opportunityFields', 'torre', e.target.value)}
+                  placeholder="Campo para torre"
+                />
+                {(configData.opportunityFields.torre || getCustomFieldId('opportunityFields', 'torre')) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ID: {getCustomFieldId('opportunityFields', 'torre') || 'ID não encontrado'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="vagas" className="block text-sm font-medium text-neutral-700 mb-2">
+                  Vagas
+                </label>
+                <Input
+                  id="vagas"
+                  value={configData.opportunityFields.vagas}
+                  onChange={(e) => handleInputChange('opportunityFields', 'vagas', e.target.value)}
+                  placeholder="Campo para vagas"
+                />
+                {(configData.opportunityFields.vagas || getCustomFieldId('opportunityFields', 'vagas')) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ID: {getCustomFieldId('opportunityFields', 'vagas') || 'ID não encontrado'}
+                  </p>
+                )}
+              </div>
+              <div>
                 <label htmlFor="responsavel" className="block text-sm font-medium text-neutral-700 mb-2">
                   Responsável
                 </label>
@@ -581,70 +625,6 @@ export default function ConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="empreendimento" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Empreendimento
-                </label>
-                <Input
-                  id="empreendimento"
-                  value={configData.contactFields.empreendimento}
-                  onChange={(e) => handleInputChange('contactFields', 'empreendimento', e.target.value)}
-                  placeholder="Campo para empreendimento"
-                />
-                {(configData.contactFields.empreendimento || getCustomFieldId('contactFields', 'empreendimento')) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'empreendimento') || 'ID não encontrado'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="unidade" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Unidade
-                </label>
-                <Input
-                  id="unidade"
-                  value={configData.contactFields.unidade}
-                  onChange={(e) => handleInputChange('contactFields', 'unidade', e.target.value)}
-                  placeholder="Campo para unidade"
-                />
-                {(configData.contactFields.unidade || getCustomFieldId('contactFields', 'unidade')) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'unidade') || 'ID não encontrado'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="andar" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Andar
-                </label>
-                <Input
-                  id="andar"
-                  value={configData.contactFields.andar}
-                  onChange={(e) => handleInputChange('contactFields', 'andar', e.target.value)}
-                  placeholder="Campo para andar"
-                />
-                {(configData.contactFields.andar || getCustomFieldId('contactFields', 'andar')) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'andar') || 'ID não encontrado'}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="torre" className="block text-sm font-medium text-neutral-700 mb-2">
-                  Torre
-                </label>
-                <Input
-                  id="torre"
-                  value={configData.contactFields.torre}
-                  onChange={(e) => handleInputChange('contactFields', 'torre', e.target.value)}
-                  placeholder="Campo para torre"
-                />
-                {(configData.contactFields.torre || getCustomFieldId('contactFields', 'torre')) && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    ID: {getCustomFieldId('contactFields', 'torre') || 'ID não encontrado'}
-                  </p>
-                )}
-              </div>
               <div>
                 <label htmlFor="cpf" className="block text-sm font-medium text-neutral-700 mb-2">
                   CPF
