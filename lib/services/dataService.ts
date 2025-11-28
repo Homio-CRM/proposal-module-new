@@ -276,7 +276,7 @@ class DataService {
 
       // Buscar datas das parcelas
       const installmentIds = (installmentsData || []).map(i => i.id)
-      let installmentsDatesMap: Record<string, string[]> = {}
+      const installmentsDatesMap: Record<string, string[]> = {}
       
       if (installmentIds.length > 0) {
         const { data: datesData, error: datesError } = await supabase

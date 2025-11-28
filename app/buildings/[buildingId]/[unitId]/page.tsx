@@ -229,10 +229,6 @@ export default function UnitDetailPage() {
                   onCopy={() => {}}
                   onDelete={() => {}}
                   onView={() => {}}
-                  selectedProposals={[]}
-                  onSelectProposal={() => {}}
-                  onSelectAll={() => {}}
-                  onBulkDelete={() => {}}
                   showUnitColumn={false}
                   canManage={allowManageProposals}
                 />

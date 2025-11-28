@@ -17,7 +17,7 @@ interface ProposalDataStepProps {
   errors?: Record<string, string>
   onPrimaryContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string; homioId?: string }) => void
   onAdditionalContactPrefill?: (data: { name?: string; phone?: string; email?: string; cpf?: string; rg?: string; rgIssuer?: string; nationality?: string; maritalStatus?: string; birthDate?: string; zipCode?: string; address?: string; city?: string; state?: string; neighborhood?: string; profession?: string; homioId?: string }) => void
-  onPropertyPrefill?: (data: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string }) => void
+  onPropertyPrefill?: (data: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string; unitValue?: number }) => void
   onLoadingChange?: (isLoading: boolean) => void
 }
 
@@ -212,7 +212,7 @@ export default function ProposalDataStep({
                           }
                         })
                     
-                    const propertyData: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string } = {}
+                    const propertyData: { development?: string; unit?: string; floor?: string; tower?: string; observations?: string; buildingId?: string; unitId?: string; reservedUntil?: string; unitValue?: number } = {}
                     
                     fieldMappings.opportunityFields.forEach(mapping => {
                       const customFieldValue = opportunityCustomFields[mapping.customFieldId]
