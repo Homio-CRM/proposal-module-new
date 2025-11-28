@@ -304,73 +304,65 @@ export async function PATCH(
 
 		if (status === 'aprovada') {
 			try {
-				const { data: proposalWithContact } = await supabaseAdmin
+				const { data: proposalWithOpportunity } = await supabaseAdmin
 					.from('proposals')
-					.select('primary_contact_id')
+					.select('opportunity_id')
 					.eq('id', proposalId)
 					.single()
 
-				if (proposalWithContact?.primary_contact_id) {
-					const { data: primaryContact } = await supabaseAdmin
-						.from('contacts')
-						.select('homio_id')
-						.eq('id', proposalWithContact.primary_contact_id)
-						.single()
+				if (proposalWithOpportunity?.opportunity_id) {
+					const { data: installmentsData, error: installmentsError } = await supabaseAdmin
+						.from('installments')
+						.select('id, type, amount_per_installment, installments_count, total_amount')
+						.eq('proposal_id', proposalId)
+						.order('created_at', { ascending: true })
 
-					if (primaryContact?.homio_id) {
-						const { data: installmentsData, error: installmentsError } = await supabaseAdmin
-							.from('installments')
-							.select('id, type, amount_per_installment, installments_count, total_amount')
-							.eq('proposal_id', proposalId)
-							.order('created_at', { ascending: true })
+					if (!installmentsError && installmentsData && installmentsData.length > 0) {
+						const installmentIds = installmentsData.map(inst => inst.id)
+						
+						const { data: datesData, error: datesError } = await supabaseAdmin
+							.from('installments_dates')
+							.select('installment_id, date')
+							.in('installment_id', installmentIds)
+							.order('date', { ascending: true })
 
-						if (!installmentsError && installmentsData && installmentsData.length > 0) {
-							const installmentIds = installmentsData.map(inst => inst.id)
-							
-							const { data: datesData, error: datesError } = await supabaseAdmin
-								.from('installments_dates')
-								.select('installment_id, date')
-								.in('installment_id', installmentIds)
-								.order('date', { ascending: true })
+						if (datesError) {
+							console.error('[PATCH /api/proposals/[id]/status] Erro ao buscar datas das parcelas:', datesError)
+						}
 
-							if (datesError) {
-								console.error('[PATCH /api/proposals/[id]/status] Erro ao buscar datas das parcelas:', datesError)
-							}
-
-							const datesMap: Record<string, string[]> = {}
-							if (datesData) {
-								datesData.forEach((dateRow: { installment_id: string; date: string }) => {
-									if (!datesMap[dateRow.installment_id]) {
-										datesMap[dateRow.installment_id] = []
-									}
-									datesMap[dateRow.installment_id].push(dateRow.date)
-								})
-							}
-
-							const installments = installmentsData.map(inst => {
-								const dates = datesMap[inst.id] || []
-								const isIntermediarias = inst.type === 'intermediarias'
-								
-								return {
-									id: inst.id,
-									condition: inst.type,
-									value: Number(inst.amount_per_installment),
-									quantity: inst.installments_count,
-									date: dates[0] || '',
-									dates: isIntermediarias ? dates : undefined,
-									totalAmount: inst.total_amount ? Number(inst.total_amount) : undefined
+						const datesMap: Record<string, string[]> = {}
+						if (datesData) {
+							datesData.forEach((dateRow: { installment_id: string; date: string }) => {
+								if (!datesMap[dateRow.installment_id]) {
+									datesMap[dateRow.installment_id] = []
 								}
+								datesMap[dateRow.installment_id].push(dateRow.date)
 							})
+						}
 
-							const webhookResult = await sendFinancePartWebhook(
-								installments,
-								primaryContact.homio_id,
-								existingProposal.agency_id
-							)
-
-							if (!webhookResult.success) {
-								console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', webhookResult.message)
+						const installments = installmentsData.map(inst => {
+							const dates = datesMap[inst.id] || []
+							const isIntermediarias = inst.type === 'intermediarias'
+							
+							return {
+								id: inst.id,
+								condition: inst.type,
+								value: Number(inst.amount_per_installment),
+								quantity: inst.installments_count,
+								date: dates[0] || '',
+								dates: isIntermediarias ? dates : undefined,
+								totalAmount: inst.total_amount ? Number(inst.total_amount) : undefined
 							}
+						})
+
+						const webhookResult = await sendFinancePartWebhook(
+							installments,
+							proposalWithOpportunity.opportunity_id,
+							existingProposal.agency_id
+						)
+
+						if (!webhookResult.success) {
+							console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', webhookResult.message)
 						}
 					}
 				}

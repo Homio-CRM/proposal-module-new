@@ -5,13 +5,14 @@ import { usePathname } from 'next/navigation'
 import { useUserDataContext } from "@/lib/contexts/UserDataContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProposalFiltersSidebar } from "@/components/ProposalFiltersSidebar";
 import { ProposalTable } from "@/components/ProposalTable";
 import { ProposalFilters, ProposalListItem } from "@/lib/types/proposal";
 import { dataService } from "@/lib/services/dataService";
 import { usePreferencesContext } from "@/lib/contexts/PreferencesContext";
 import { canManageProposals as canManageProposalsPermission, canViewProposals as canViewProposalsPermission, restrictProposalsToCreator } from "@/lib/utils/permissions";
-import { Plus, Trash2, Settings } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function ProposalsPage() {
@@ -25,21 +26,19 @@ export default function ProposalsPage() {
     status: 'all',
     createdBy: 'all'
   });
-  const [selectedProposals, setSelectedProposals] = useState<string[]>([]);
   const [proposals, setProposals] = useState<ProposalListItem[]>([]);
   const [profiles, setProfiles] = useState<Array<{ id: string; name: string | null }>>([]);
   const [proposalsLoading, setProposalsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const userRole = userData?.role ?? 'user';
   const allowViewProposals = canViewProposalsPermission(preferences ?? null, userRole);
   const allowManageProposals = canManageProposalsPermission(preferences ?? null, userRole);
   const restrictToCreator = restrictProposalsToCreator(preferences ?? null, userRole) ? userData?.userId : undefined;
   const showCreatedByFilter = !restrictToCreator;
-  useEffect(() => {
-    if (!allowManageProposals) {
-      setSelectedProposals([]);
-    }
-  }, [allowManageProposals]);
   const developmentOptions = useMemo(() => {
     const set = new Set<string>([''])
     proposals.forEach(p => {
@@ -158,13 +157,29 @@ export default function ProposalsPage() {
         return matchesSearch && matchesDevelopment && matchesUnit && matchesStatus && matchesCreatedBy;
       })
       .sort((a, b) => {
-        // Ordenar por data da proposta (mais recente primeiro)
         return new Date(b.proposalDate).getTime() - new Date(a.proposalDate).getTime();
       });
   }, [proposals, filters]);
 
+  const paginatedProposals = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredProposals.slice(startIndex, endIndex);
+  }, [filteredProposals, currentPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredProposals.length / itemsPerPage);
+  }, [filteredProposals.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
   const handleFiltersChange = (newFilters: ProposalFilters) => {
     setFilters(newFilters);
+    setCurrentPage(1);
   };
 
   const handleClearFilters = () => {
@@ -177,18 +192,116 @@ export default function ProposalsPage() {
     });
   };
 
-  const handleCopy = () => {};
-
-  const handleDelete = async (proposalId: string) => {
+  const handleCopy = async (proposalId: string) => {
     if (!userData?.companyId || !allowManageProposals) return;
     
     try {
-      await dataService.deleteProposal(
+      const proposalDetails = await dataService.fetchProposalDetails(
         proposalId,
         restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
       );
+
+      if (!proposalDetails) {
+        return;
+      }
+
+      const { proposalFormData } = proposalDetails;
+      const originalName = proposalFormData.proposal.proposalName || 'Proposta sem nome';
+      const newName = `Cópia de ${originalName}`;
+
+      if (!proposalFormData.proposal.opportunityId) {
+        return;
+      }
+
+      if (!proposalFormData.property.unitId) {
+        return;
+      }
+
+      const supabase = await import('@/lib/supabaseClient').then(m => m.getSupabase());
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Clear cache and reload proposals
+      if (!session?.access_token) {
+        return;
+      }
+
+      const installmentsPayload = proposalFormData.installments.map(installment => {
+        const basePayload = {
+          type: installment.condition,
+          amountPerInstallment: installment.value,
+          installmentsCount: installment.quantity,
+          totalAmount: installment.value * installment.quantity
+        };
+
+        if (installment.condition === 'intermediarias' && installment.dates && installment.dates.length > 0) {
+          return {
+            ...basePayload,
+            dates: installment.dates
+          };
+        } else if (installment.date) {
+          return {
+            ...basePayload,
+            startDate: installment.date
+          };
+        }
+        return basePayload;
+      });
+
+      const response = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          agencyId: userData.activeLocation,
+          opportunityId: proposalFormData.proposal.opportunityId,
+          proposalDate: proposalFormData.proposal.proposalDate,
+          proposalName: newName,
+          responsible: proposalFormData.proposal.responsible,
+          reservedUntil: proposalFormData.property.reservedUntil || undefined,
+          shouldReserveUnit: proposalFormData.property.shouldReserveUnit || false,
+          unitId: proposalFormData.property.unitId,
+          primaryContact: {
+            homioId: proposalFormData.primaryContact.homioId,
+            name: proposalFormData.primaryContact.name
+          },
+          secondaryContact: proposalFormData.additionalContact ? {
+            homioId: proposalFormData.additionalContact.homioId,
+            name: proposalFormData.additionalContact.name
+          } : null,
+          installments: installmentsPayload
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao duplicar proposta');
+      }
+
+      dataService.clearProposalsCache(
+        userData.companyId,
+        restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+      );
+      await loadProposals();
+    } catch (error) {
+      console.error('Erro ao duplicar proposta:', error);
+    }
+  };
+
+  const handleDeleteClick = (proposalId: string) => {
+    setProposalToDelete(proposalId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!proposalToDelete || !userData?.companyId || !allowManageProposals) return;
+    
+    try {
+      await dataService.deleteProposal(
+        proposalToDelete,
+        restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
+      );
+      
       dataService.clearProposalsCache(
         userData.companyId,
         restrictToCreator ? { restrictToUserId: restrictToCreator } : {}
@@ -199,41 +312,19 @@ export default function ProposalsPage() {
       );
       setProposals(proposalsData);
       
-      // Remove from selected if it was selected
-      setSelectedProposals(prev => prev.filter(id => id !== proposalId));
-      
+      setDeleteDialogOpen(false);
+      setProposalToDelete(null);
     } catch (error) {
       console.error('Erro ao deletar proposta:', error);
-      // TODO: Show error toast/notification
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setProposalToDelete(null);
   };
 
   const handleView = () => {};
-
-  const handleSelectProposal = (id: string, selected: boolean) => {
-    if (!allowManageProposals) return;
-    if (selected) {
-      setSelectedProposals(prev => [...prev, id]);
-    } else {
-      setSelectedProposals(prev => prev.filter(proposalId => proposalId !== id));
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (!allowManageProposals) return;
-    if (selectedProposals.length === filteredProposals.length) {
-      setSelectedProposals([]);
-    } else {
-      setSelectedProposals(filteredProposals.map(proposal => proposal.id));
-    }
-  };
-
-  const handleBulkDelete = () => {
-    if (selectedProposals.length > 0) {
-      // TODO: Implementar exclusão em massa
-      setSelectedProposals([]);
-    }
-  };
 
   if (loading || proposalsLoading || preferencesLoading) {
     return (
@@ -393,46 +484,74 @@ export default function ProposalsPage() {
             </div>
           </div>
 
-          {selectedProposals.length > 0 && (
-            <div className="flex items-center justify-end mb-6">
-              <Button
-                variant="destructive"
-                onClick={handleBulkDelete}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir Selecionadas ({selectedProposals.length})
-              </Button>
-            </div>
-          )}
-
           <ProposalTable
-            proposals={filteredProposals}
+            proposals={paginatedProposals}
             onCopy={handleCopy}
-            onDelete={handleDelete}
+            onDelete={handleDeleteClick}
             onView={handleView}
-            selectedProposals={selectedProposals}
-            onSelectProposal={handleSelectProposal}
-            onSelectAll={handleSelectAll}
-            onBulkDelete={handleBulkDelete}
             canManage={allowManageProposals}
           />
 
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirmar exclusão</DialogTitle>
+                <DialogDescription>
+                  Tem certeza que deseja excluir esta proposta? Esta ação não pode ser desfeita.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={handleDeleteCancel}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteConfirm}>
+                  Excluir
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <div className="mt-6 flex items-center justify-between text-sm text-neutral-600">
             <span>
-              Mostrando 1 a {filteredProposals.length} de {filteredProposals.length} propostas
+              {filteredProposals.length > 0 ? (
+                <>
+                  Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredProposals.length)} de {filteredProposals.length} propostas
+                </>
+              ) : (
+                'Nenhuma proposta encontrada'
+              )}
             </span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>
-                Anterior
-              </Button>
-              <Button variant="outline" size="sm" className="bg-primary-600 text-white border-primary-600">
-                1
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                Próxima
-              </Button>
-            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-primary-600 text-white border-primary-600" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

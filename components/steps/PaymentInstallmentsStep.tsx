@@ -39,11 +39,16 @@ const PAYMENT_CONDITIONS: { value: PaymentCondition; label: string }[] = [
 const generateId = () => Math.random().toString(36).substr(2, 9)
 
 const formatCurrencyInput = (value: string): string => {
+  if (!value || value === '' || value === 'NaN' || value === 'undefined') return ''
+  
   const numbersOnly = value.replace(/\D/g, '')
   
   if (numbersOnly === '') return ''
   
   const cents = parseInt(numbersOnly, 10)
+  
+  if (isNaN(cents) || cents < 0) return ''
+  
   const reais = Math.floor(cents / 100)
   const centavos = cents % 100
   
@@ -53,9 +58,16 @@ const formatCurrencyInput = (value: string): string => {
 }
 
 const parseCurrencyInput = (value: string): number => {
+  if (!value || value === '' || value === 'NaN' || value === 'undefined') return 0
+  
   const numbersOnly = value.replace(/\D/g, '')
   if (numbersOnly === '') return 0
-  return parseFloat(numbersOnly) / 100
+  
+  const parsed = parseFloat(numbersOnly) / 100
+  
+  if (isNaN(parsed) || !isFinite(parsed) || parsed < 0) return 0
+  
+  return parsed
 }
 
 export default function PaymentInstallmentsStep({ 
@@ -106,7 +118,18 @@ export default function PaymentInstallmentsStep({
   const updateInstallment = (id: string, field: keyof PaymentInstallment, value: string | number) => {
     const updatedInstallments = installments.map(installment => {
       if (installment.id === id) {
-        const updated = { ...installment, [field]: value }
+        let validatedValue: string | number = value
+        
+        if (field === 'value') {
+          const numValue = typeof value === 'number' ? value : parseFloat(String(value))
+          if (isNaN(numValue) || !isFinite(numValue) || numValue < 0) {
+            validatedValue = 0
+          } else {
+            validatedValue = numValue
+          }
+        }
+        
+        const updated = { ...installment, [field]: validatedValue }
         
         if (field === 'condition' && value === 'intermediarias') {
           updated.dates = Array(updated.quantity || 1).fill('')
@@ -311,7 +334,14 @@ export default function PaymentInstallmentsStep({
                     </label>
                     <FormattedInput
                       type="text"
-                      value={installment.value ? formatCurrencyInput((installment.value * 100).toString()) : ''}
+                      value={
+                        typeof installment.value === 'number' && 
+                        !isNaN(installment.value) && 
+                        isFinite(installment.value) && 
+                        installment.value >= 0
+                          ? formatCurrencyInput((Math.round(installment.value * 100)).toString())
+                          : ''
+                      }
                       onChange={(e) => {
                         const numericValue = parseCurrencyInput(e.target.value)
                         updateInstallment(installment.id, 'value', numericValue)

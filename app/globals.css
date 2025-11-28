@@ -58,6 +58,37 @@
   border-color: #7c3aed !important;
 }
 
+button.hover\:bg-primary-50:hover,
+.hover\:bg-primary-50:hover {
+  background-color: #faf5ff !important;
+}
+
+button.hover\:border-primary-300:hover,
+.hover\:border-primary-300:hover {
+  border-color: #7c3aed !important;
+}
+
+button.hover\:border-primary-600:hover,
+.hover\:border-primary-600:hover {
+  border-color: #7c3aed !important;
+}
+
+button[class*="hover:!bg-primary-50"]:hover {
+  background-color: #faf5ff !important;
+}
+
+button.proposal-copy-button {
+  border: 1px solid transparent !important;
+  border-width: 1px !important;
+}
+
+button.proposal-copy-button:hover {
+  border: 1px solid #7c3aed !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  background-color: #faf5ff !important;
+}
+
 /* Checkbox primary colors */
 [data-state="checked"] {
   background-color: #7c3aed !important;

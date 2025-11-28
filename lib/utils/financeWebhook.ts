@@ -8,7 +8,7 @@ interface FinanceWebhookPayload {
     dates?: string[]
     totalAmount?: number
   }>
-  mainContactId: string
+  opportunityId: string
   locationId: string
 }
 
@@ -19,13 +19,13 @@ interface WebhookResponse {
 
 export async function sendFinancePartWebhook(
   installments: FinanceWebhookPayload['installments'],
-  mainContactId: string,
+  opportunityId: string,
   locationId: string
 ): Promise<WebhookResponse> {
   try {
     const payload: FinanceWebhookPayload = {
       installments,
-      mainContactId,
+      opportunityId,
       locationId
     }
 
