@@ -373,12 +373,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         if (!formData.property.unit.trim()) {
           errors['property.unit'] = 'Unidade é obrigatória'
         }
-        if (!formData.property.floor?.trim()) {
-          errors['property.floor'] = 'Andar é obrigatório'
-        }
-        if (!formData.property.tower?.trim()) {
-          errors['property.tower'] = 'Torre é obrigatória'
-        }
         if (formData.property.shouldReserveUnit !== false && !formData.property.reservedUntil) {
           errors['property.reservedUntil'] = 'Data de reserva é obrigatória'
         }
@@ -507,8 +501,6 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         return !!(
           property.development.trim() &&
           property.unit.trim() &&
-          (property.floor?.trim() || '') &&
-          (property.tower?.trim() || '') &&
           (property.shouldReserveUnit === false || property.reservedUntil)
         )
       
@@ -862,7 +854,9 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
         unidade: formData.property.unit ? formData.property.unit.trim() : undefined,
         andar: formData.property.floor ? formData.property.floor.trim() : undefined,
         torre: formData.property.tower ? formData.property.tower.trim() : undefined,
-        vagas: formData.property.parkingSpots ? formData.property.parkingSpots.toString().trim() : undefined,
+        vagas: formData.property.parkingSpots !== undefined && formData.property.parkingSpots !== null 
+          ? formData.property.parkingSpots.toString().trim() 
+          : undefined,
         observacoes: formData.property.observations ? formData.property.observations.trim() : undefined
       }
 
@@ -874,8 +868,8 @@ export default function ProposalForm({ initialData, proposalId }: ProposalFormPr
 
       Object.entries(customFieldIds.opportunityFields).forEach(([fieldKey, fieldId]) => {
         const value = opportunityFieldValueMap[fieldKey]
-        if (typeof value === 'string' && value.trim() !== '') {
-          opportunityCustomFields.push({ id: fieldId, field_value: value })
+        if (value !== undefined && value !== null && typeof value === 'string' && value.trim() !== '') {
+          opportunityCustomFields.push({ id: fieldId, field_value: value.trim() })
         }
       })
 

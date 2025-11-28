@@ -34,6 +34,9 @@ interface Unit {
   label: string
   status: string
   currentValue?: number
+  parkingSpaceCount?: number
+  bedroomCount?: number
+  totalArea?: number
 }
 
 type UnitRow = {
@@ -46,6 +49,9 @@ type UnitRow = {
   status: string
   gross_price_amount?: number | null
   price_correction_rate?: number | null
+  parking_space_count?: number | null
+  bedroom_count?: number | null
+  total_area?: number | null
   buildings?: { name?: string | null } | null
 }
 
@@ -62,7 +68,12 @@ export default function PropertyDataStep({
   const [selectedUnitStatus, setSelectedUnitStatus] = useState<string>('')
 
   useEffect(() => {
-    setFormData(data)
+    setFormData(prev => {
+      if (prev.unitId && prev.unitId === data.unitId && prev.parkingSpots !== undefined && data.parkingSpots === undefined) {
+        return { ...data, parkingSpots: prev.parkingSpots }
+      }
+      return data
+    })
   }, [data])
 
   // Atualizar status da unidade e building selecionado quando formData.unitId muda
@@ -72,6 +83,18 @@ export default function PropertyDataStep({
       if (unitFromDb) {
         setSelectedUnitStatus(unitFromDb.status || '')
         setSelectedBuildingId(unitFromDb.buildingId)
+        
+        // Garantir que parkingSpots seja atualizado quando a unidade é carregada
+        if (unitFromDb.parkingSpaceCount !== undefined && unitFromDb.parkingSpaceCount !== null) {
+          if (formData.parkingSpots !== unitFromDb.parkingSpaceCount) {
+            const updated: PropertyData = {
+              ...formData,
+              parkingSpots: unitFromDb.parkingSpaceCount
+            }
+            setFormData(updated)
+            onDataChange(updated)
+          }
+        }
       } else {
       }
     }
@@ -93,7 +116,7 @@ export default function PropertyDataStep({
         
         const { data: unitsData } = await supabase
           .from('units')
-          .select('id, name, number, tower, floor, building_id, status, gross_price_amount, price_correction_rate, buildings(name)')
+          .select('id, name, number, tower, floor, building_id, status, gross_price_amount, price_correction_rate, parking_space_count, bedroom_count, total_area, buildings(name)')
           .eq('agency_id', userData.activeLocation)
           .order('number', { ascending: true })
         
@@ -119,7 +142,10 @@ export default function PropertyDataStep({
                 buildingName,
                 label: u.name ?? u.number,
                 status: u.status,
-                currentValue: currentValue > 0 ? currentValue : undefined
+                currentValue: currentValue > 0 ? currentValue : undefined,
+                parkingSpaceCount: u.parking_space_count !== null && u.parking_space_count !== undefined ? u.parking_space_count : undefined,
+                bedroomCount: u.bedroom_count !== null && u.bedroom_count !== undefined ? u.bedroom_count : undefined,
+                totalArea: u.total_area !== null && u.total_area !== undefined ? u.total_area : undefined
               }
             })
           setAllUnits(mapped)
@@ -199,7 +225,6 @@ export default function PropertyDataStep({
   }
 
   const handleUnitChange = (unitId: string) => {
-    
     const selected = allUnits.find(u => u.id === unitId)
     
     if (selected) {
@@ -217,7 +242,8 @@ export default function PropertyDataStep({
         floor: selected.floor || '',
         development: selected.buildingName,
         buildingId: selected.buildingId,
-        unitValue: selected.currentValue
+        unitValue: selected.currentValue,
+        parkingSpots: selected.parkingSpaceCount !== null && selected.parkingSpaceCount !== undefined ? selected.parkingSpaceCount : undefined
       }
       
       setFormData(next)
@@ -293,45 +319,6 @@ export default function PropertyDataStep({
           )}
         </div>
 
-        <div>
-          <label htmlFor="tower" className="block text-sm font-medium text-neutral-700 mb-2">
-            Torre *
-          </label>
-          <input
-            type="text"
-            id="tower"
-            value={formData.tower || ''}
-            onChange={(e) => handleInputChange('tower', e.target.value)}
-            placeholder="Digite a torre"
-            className={cn(
-              "flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              errors['property.tower'] && 'border-red-500'
-            )}
-          />
-          {errors['property.tower'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['property.tower']}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="floor" className="block text-sm font-medium text-neutral-700 mb-2">
-            Pavimento *
-          </label>
-          <input
-            type="text"
-            id="floor"
-            value={formData.floor || ''}
-            onChange={(e) => handleInputChange('floor', e.target.value)}
-            placeholder="Digite o pavimento"
-            className={cn(
-              "flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-              errors['property.floor'] && 'border-red-500'
-            )}
-          />
-          {errors['property.floor'] && (
-            <p className="text-sm text-red-600 mt-1">{errors['property.floor']}</p>
-          )}
-        </div>
 
         <div>
           <div className="flex items-center space-x-2 mb-2">
@@ -372,6 +359,49 @@ export default function PropertyDataStep({
           </div>
         )}
       </div>
+
+      {formData.unitId && (() => {
+        const selectedUnit = allUnits.find(u => u.id === formData.unitId)
+        if (!selectedUnit) return null
+        
+        return (
+          <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-3">Informações da Unidade</h3>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {selectedUnit.tower && selectedUnit.tower.trim() !== '' && (
+                <div>
+                  <p className="text-xs text-neutral-600 mb-1">Torre</p>
+                  <p className="text-sm font-medium text-neutral-900">{selectedUnit.tower}</p>
+                </div>
+              )}
+              {selectedUnit.floor && selectedUnit.floor.trim() !== '' && (
+                <div>
+                  <p className="text-xs text-neutral-600 mb-1">Pavimento</p>
+                  <p className="text-sm font-medium text-neutral-900">{selectedUnit.floor}</p>
+                </div>
+              )}
+              {selectedUnit.parkingSpaceCount !== undefined && (
+                <div>
+                  <p className="text-xs text-neutral-600 mb-1">Quantidade de Vagas</p>
+                  <p className="text-sm font-medium text-neutral-900">{selectedUnit.parkingSpaceCount}</p>
+                </div>
+              )}
+              {selectedUnit.bedroomCount !== undefined && (
+                <div>
+                  <p className="text-xs text-neutral-600 mb-1">Quantidade de Quartos</p>
+                  <p className="text-sm font-medium text-neutral-900">{selectedUnit.bedroomCount}</p>
+                </div>
+              )}
+              {selectedUnit.totalArea !== undefined && (
+                <div>
+                  <p className="text-xs text-neutral-600 mb-1">Área Total</p>
+                  <p className="text-sm font-medium text-neutral-900">{selectedUnit.totalArea.toLocaleString('pt-BR')} m²</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="grid grid-cols-1 gap-6">
         <div>

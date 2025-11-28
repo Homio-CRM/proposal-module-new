@@ -109,6 +109,7 @@ class CustomFieldsService {
           
           // Remover prefixo opportunity_ se existir
           const keyWithoutPrefix = key.replace(/^opportunity_/, '')
+          const keyTrimmed = key.trim()
           
           // Primeiro tentar com o fieldKey exato
           let fieldKey = `opportunity.${keyWithoutPrefix}`
@@ -134,13 +135,60 @@ class CustomFieldsService {
             }
           }
           
+          // Se ainda não encontrou, tentar buscar pelo nome do campo (case insensitive)
+          if (!field) {
+            // Primeiro tentar match exato
+            field = opportunityFields.find((f: CustomField) => 
+              f.name.toLowerCase().trim() === keyTrimmed.toLowerCase()
+            )
+            
+            // Se não encontrou, tentar match parcial (o nome do campo contém o texto digitado ou vice-versa)
+            if (!field) {
+              field = opportunityFields.find((f: CustomField) => {
+                const fieldNameLower = f.name.toLowerCase().trim()
+                const keyLower = keyTrimmed.toLowerCase()
+                return fieldNameLower.includes(keyLower) || keyLower.includes(fieldNameLower)
+              })
+            }
+          }
+          
+          // Se ainda não encontrou, tentar buscar pelo fieldKey sem o prefixo opportunity
+          if (!field) {
+            field = opportunityFields.find((f: CustomField) => {
+              const fieldKeyWithoutPrefix = f.fieldKey.replace(/^opportunity\./, '')
+              return fieldKeyWithoutPrefix.toLowerCase().trim() === keyTrimmed.toLowerCase()
+            })
+          }
           
           if (field) {
-            const formFieldName = opportunityFieldMapping[keyWithoutPrefix] || 
-              opportunityFieldMapping[field.fieldKey.replace('opportunity.', '')] || 
-              keyWithoutPrefix
+            // Determinar o nome do campo do formulário baseado no mapeamento ou no fieldKey
+            let formFieldName = opportunityFieldMapping[keyWithoutPrefix]
+            
+            if (!formFieldName && field.fieldKey) {
+              const fieldKeyWithoutPrefix = field.fieldKey.replace(/^opportunity\./, '')
+              formFieldName = opportunityFieldMapping[fieldKeyWithoutPrefix]
+            }
+            
+            if (!formFieldName) {
+              // Tentar inferir pelo nome do campo
+              const fieldNameLower = field.name.toLowerCase()
+              const keyLower = keyTrimmed.toLowerCase()
+              
+              if (fieldNameLower.includes('andar') || fieldNameLower.includes('pavimento') || fieldNameLower.includes('floor') ||
+                  keyLower.includes('andar') || keyLower.includes('pavimento') || keyLower.includes('floor')) {
+                formFieldName = 'andar'
+              } else if (fieldNameLower.includes('vagas') || fieldNameLower.includes('parking') || fieldNameLower.includes('estacionamento') ||
+                         keyLower.includes('vagas') || keyLower.includes('parking') || keyLower.includes('estacionamento')) {
+                formFieldName = 'vagas'
+              } else if (fieldNameLower.includes('torre') || fieldNameLower.includes('tower') ||
+                         keyLower.includes('torre') || keyLower.includes('tower')) {
+                formFieldName = 'torre'
+              } else {
+                formFieldName = keyWithoutPrefix
+              }
+            }
+            
             opportunityFieldIds[formFieldName] = field.id
-          } else {
           }
         }
       })
