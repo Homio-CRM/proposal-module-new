@@ -73,6 +73,39 @@ interface MonthlyAdjustmentRateDBRow {
   updated_at: string
 }
 
+function calculateTotalAccumulated(adjustmentRates: MonthlyAdjustmentRateDBRow[]): number {
+  const roundTo8Decimals = (value: number): number => {
+    return Math.round(value * 100000000) / 100000000
+  }
+
+  const allMonths: number[] = []
+  
+  const sortedRates = [...adjustmentRates].sort((a, b) => a.year - b.year)
+  
+  sortedRates.forEach(rate => {
+    allMonths.push(
+      roundTo8Decimals(Number(rate.january_rate) || 0),
+      roundTo8Decimals(Number(rate.february_rate) || 0),
+      roundTo8Decimals(Number(rate.march_rate) || 0),
+      roundTo8Decimals(Number(rate.april_rate) || 0),
+      roundTo8Decimals(Number(rate.may_rate) || 0),
+      roundTo8Decimals(Number(rate.june_rate) || 0),
+      roundTo8Decimals(Number(rate.july_rate) || 0),
+      roundTo8Decimals(Number(rate.august_rate) || 0),
+      roundTo8Decimals(Number(rate.september_rate) || 0),
+      roundTo8Decimals(Number(rate.october_rate) || 0),
+      roundTo8Decimals(Number(rate.november_rate) || 0),
+      roundTo8Decimals(Number(rate.december_rate) || 0)
+    )
+  })
+  
+  let product = 1
+  allMonths.forEach(monthRate => {
+    product = roundTo8Decimals(product * roundTo8Decimals(1 + monthRate))
+  })
+  return roundTo8Decimals(product - 1)
+}
+
 function mapUnitDBRowToUnit(unit: UnitDBRow, adjustmentRates: MonthlyAdjustmentRateDBRow[] = []): Unit {
   const grossPrice = Number(unit.gross_price_amount) || 0
   const correctionRate = Number(unit.price_correction_rate) || 0
@@ -342,10 +375,18 @@ class BuildingService {
       }
 
       if (updates.price_correction_rate !== undefined) {
+        const adjustmentRatesForWebhook = (adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || []
+        let correctionRateForWebhook = updatedUnit.price_correction_rate
+        
+        if (adjustmentRatesForWebhook.length > 0) {
+          const totalAccumulated = calculateTotalAccumulated(adjustmentRatesForWebhook)
+          correctionRateForWebhook = 1 + totalAccumulated
+        }
+        
         const webhookResult = await sendUnitCorrectionRateWebhook(
           updatedUnit.id,
           updatedUnit.name,
-          updatedUnit.price_correction_rate,
+          correctionRateForWebhook,
           data.agency_id,
           buildingName
         )
@@ -641,10 +682,13 @@ class BuildingService {
         .eq('id', unitData.building_id)
         .single()
 
+      const totalAccumulated = calculateTotalAccumulated((adjustmentRatesData as MonthlyAdjustmentRateDBRow[]) || [])
+      const fullCorrectionRate = 1 + totalAccumulated
+
       const webhookResult = await sendUnitCorrectionRateWebhook(
         updatedUnit.id,
         updatedUnit.name,
-        updatedUnit.price_correction_rate,
+        fullCorrectionRate,
         unitData.agency_id,
         buildingData?.name
       )
