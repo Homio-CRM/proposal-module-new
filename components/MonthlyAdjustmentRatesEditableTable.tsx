@@ -272,28 +272,60 @@ export function MonthlyAdjustmentRatesEditableTable({
     setHasChanges(true)
   }
 
-  const calculateYearTotal = (rate: EditableRate): number => {
-    const months = [
-      rate.january_rate || 0,
-      rate.february_rate || 0,
-      rate.march_rate || 0,
-      rate.april_rate || 0,
-      rate.may_rate || 0,
-      rate.june_rate || 0,
-      rate.july_rate || 0,
-      rate.august_rate || 0,
-      rate.september_rate || 0,
-      rate.october_rate || 0,
-      rate.november_rate || 0,
-      rate.december_rate || 0
-    ]
-    const product = months.reduce((acc, monthRate) => acc * (1 + monthRate), 1)
-    return product - 1
+  const roundTo8Decimals = (value: number): number => {
+    return Math.round(value * 100000000) / 100000000
+  }
+
+  const calculateTotalAccumulated = (unitId: string): number => {
+    const allMonths: number[] = []
+    
+    const unitRates: EditableRate[] = []
+    editableRates.forEach(rate => {
+      if (rate.unit_id === unitId) {
+        unitRates.push(rate)
+      }
+    })
+    
+    const sortedRates = unitRates.sort((a, b) => a.year - b.year)
+    
+    sortedRates.forEach(rate => {
+      allMonths.push(
+        roundTo8Decimals(rate.january_rate || 0),
+        roundTo8Decimals(rate.february_rate || 0),
+        roundTo8Decimals(rate.march_rate || 0),
+        roundTo8Decimals(rate.april_rate || 0),
+        roundTo8Decimals(rate.may_rate || 0),
+        roundTo8Decimals(rate.june_rate || 0),
+        roundTo8Decimals(rate.july_rate || 0),
+        roundTo8Decimals(rate.august_rate || 0),
+        roundTo8Decimals(rate.september_rate || 0),
+        roundTo8Decimals(rate.october_rate || 0),
+        roundTo8Decimals(rate.november_rate || 0),
+        roundTo8Decimals(rate.december_rate || 0)
+      )
+    })
+    
+    let product = 1
+    allMonths.forEach(monthRate => {
+      product = roundTo8Decimals(product * roundTo8Decimals(1 + monthRate))
+    })
+    return roundTo8Decimals(product - 1)
   }
 
   const formatRate = (rate: number | null | undefined): string => {
     if (rate === null || rate === undefined || isNaN(rate) || rate === 0) return '-'
     return `${(rate * 100).toFixed(2)}%`
+  }
+
+  const truncateTo2Decimals = (value: number): string => {
+    const multiplied = value * 100
+    const truncated = Math.floor(multiplied * 100) / 100
+    return truncated.toFixed(2)
+  }
+
+  const formatTotalRate = (rate: number | null | undefined): string => {
+    if (rate === null || rate === undefined || isNaN(rate) || rate === 0) return '-'
+    return `${truncateTo2Decimals(rate)}%`
   }
 
   const ratesAreEqual = (rate1: EditableRate, rate2: EditableRate): boolean => {
@@ -501,87 +533,91 @@ export function MonthlyAdjustmentRatesEditableTable({
                   >
                     {unit.name || unit.number}
                   </td>
-                  {years.map(year => {
-                    const rate = getRate(unit.id, year)
-                    return (
-                      <React.Fragment key={year}>
-                        {MONTHS.map(month => {
-                          const cellKey = getCellKey(unit.id, year, month.key)
-                          const cellValue = cellValues.get(cellKey) || ''
-                          const isEditing = editingCell === cellKey
-                          
-                          return (
-                            <td key={`${year}_${month.key}`} className="text-center py-1 px-1">
-                              {isEditing ? (
-                                <Input
-                                  type="text"
-                                  value={cellValue}
-                                  onChange={(e) => updateCellValue(unit.id, year, month.key, e.target.value)}
-                                  onBlur={() => {
-                                    setEditingCell(null)
-                                    setEditingCellOriginalValue(null)
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.currentTarget.blur()
-                                    } else if (e.key === 'Escape') {
-                                      if (editingCellOriginalValue !== null) {
-                                        const originalValue = editingCellOriginalValue
-                                        setCellValues(prev => {
-                                          const newMap = new Map(prev)
-                                          newMap.set(cellKey, originalValue)
-                                          return newMap
-                                        })
-                                        
-                                        const rateKey = getRateKey(unit.id, year)
-                                        const originalRate = unit.monthly_adjustment_rates?.find(r => r.year === year)
-                                        if (originalRate) {
-                                          const rate = editableRates.get(rateKey)
-                                          if (rate) {
-                                            const restoredRate = { ...rate }
-                                            restoredRate[month.key] = originalRate[month.key] as number
+                  {(() => {
+                    const lastYearIndex = years.length - 1
+                    return years.map((year, yearIndex) => {
+                      const rate = getRate(unit.id, year)
+                      const isLastYear = yearIndex === lastYearIndex
+                      return (
+                        <React.Fragment key={year}>
+                          {MONTHS.map(month => {
+                            const cellKey = getCellKey(unit.id, year, month.key)
+                            const cellValue = cellValues.get(cellKey) || ''
+                            const isEditing = editingCell === cellKey
+                            
+                            return (
+                              <td key={`${year}_${month.key}`} className="text-center py-1 px-1">
+                                {isEditing ? (
+                                  <Input
+                                    type="text"
+                                    value={cellValue}
+                                    onChange={(e) => updateCellValue(unit.id, year, month.key, e.target.value)}
+                                    onBlur={() => {
+                                      setEditingCell(null)
+                                      setEditingCellOriginalValue(null)
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.currentTarget.blur()
+                                      } else if (e.key === 'Escape') {
+                                        if (editingCellOriginalValue !== null) {
+                                          const originalValue = editingCellOriginalValue
+                                          setCellValues(prev => {
+                                            const newMap = new Map(prev)
+                                            newMap.set(cellKey, originalValue)
+                                            return newMap
+                                          })
+                                          
+                                          const rateKey = getRateKey(unit.id, year)
+                                          const originalRate = unit.monthly_adjustment_rates?.find(r => r.year === year)
+                                          if (originalRate) {
+                                            const rate = editableRates.get(rateKey)
+                                            if (rate) {
+                                              const restoredRate = { ...rate }
+                                              restoredRate[month.key] = originalRate[month.key] as number
+                                              setEditableRates(prev => {
+                                                const newMap = new Map(prev)
+                                                newMap.set(rateKey, restoredRate)
+                                                return newMap
+                                              })
+                                            }
+                                          } else {
                                             setEditableRates(prev => {
                                               const newMap = new Map(prev)
-                                              newMap.set(rateKey, restoredRate)
+                                              newMap.delete(rateKey)
                                               return newMap
                                             })
                                           }
-                                        } else {
-                                          setEditableRates(prev => {
-                                            const newMap = new Map(prev)
-                                            newMap.delete(rateKey)
-                                            return newMap
-                                          })
                                         }
+                                        setEditingCell(null)
+                                        setEditingCellOriginalValue(null)
                                       }
-                                      setEditingCell(null)
-                                      setEditingCellOriginalValue(null)
-                                    }
-                                  }}
-                                  className="h-8 w-16 text-center text-sm px-1"
-                                  autoFocus
-                                />
-                              ) : (
-                                <div
-                                  onClick={() => {
-                                    setEditingCell(cellKey)
-                                    setEditingCellOriginalValue(cellValue)
-                                  }}
-                                  className="h-8 w-16 mx-auto flex items-center justify-center text-sm text-gray-700 cursor-pointer hover:bg-gray-100 rounded border border-transparent hover:border-gray-300"
-                                  title="Clique para editar"
-                                >
-                                  {cellValue || '-'}
-                                </div>
-                              )}
-                            </td>
-                          )
-                        })}
-                        <td className="text-center py-3 px-2 font-semibold text-sm text-gray-900 border-l border-gray-200">
-                          {rate ? formatRate(calculateYearTotal(rate)) : '-'}
-                        </td>
-                      </React.Fragment>
-                    )
-                  })}
+                                    }}
+                                    className="h-8 w-16 text-center text-sm px-1"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <div
+                                    onClick={() => {
+                                      setEditingCell(cellKey)
+                                      setEditingCellOriginalValue(cellValue)
+                                    }}
+                                    className="h-8 w-16 mx-auto flex items-center justify-center text-sm text-gray-700 cursor-pointer hover:bg-gray-100 rounded border border-transparent hover:border-gray-300"
+                                    title="Clique para editar"
+                                  >
+                                    {cellValue || '-'}
+                                  </div>
+                                )}
+                              </td>
+                            )
+                          })}
+                          <td className="text-center py-3 px-2 font-semibold text-sm text-gray-900 border-l border-gray-200">
+                            {isLastYear ? formatTotalRate(calculateTotalAccumulated(unit.id)) : '-'}
+                          </td>
+                        </React.Fragment>
+                      )
+                    })
+                  })()}
                 </tr>
               ))}
             </tbody>

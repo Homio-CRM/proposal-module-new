@@ -38,6 +38,45 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
 
+  const roundTo8Decimals = (value: number): number => {
+    return Math.round(value * 100000000) / 100000000
+  }
+
+  const truncateTo2Decimals = (value: number): string => {
+    const multiplied = value * 100
+    const truncated = Math.floor(multiplied * 100) / 100
+    return truncated.toFixed(2)
+  }
+
+  const calculateTotalAccumulated = (rates: MonthlyAdjustmentRate[]): number => {
+    const allMonths: number[] = []
+    
+    const sortedRates = [...rates].sort((a, b) => a.year - b.year)
+    
+    sortedRates.forEach(rate => {
+      allMonths.push(
+        roundTo8Decimals(rate.january_rate || 0),
+        roundTo8Decimals(rate.february_rate || 0),
+        roundTo8Decimals(rate.march_rate || 0),
+        roundTo8Decimals(rate.april_rate || 0),
+        roundTo8Decimals(rate.may_rate || 0),
+        roundTo8Decimals(rate.june_rate || 0),
+        roundTo8Decimals(rate.july_rate || 0),
+        roundTo8Decimals(rate.august_rate || 0),
+        roundTo8Decimals(rate.september_rate || 0),
+        roundTo8Decimals(rate.october_rate || 0),
+        roundTo8Decimals(rate.november_rate || 0),
+        roundTo8Decimals(rate.december_rate || 0)
+      )
+    })
+    
+    let product = 1
+    allMonths.forEach(monthRate => {
+      product = roundTo8Decimals(product * roundTo8Decimals(1 + monthRate))
+    })
+    return roundTo8Decimals(product - 1)
+  }
+
 
 
 
@@ -155,17 +194,31 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
             <div>
               <label className="text-sm font-medium text-gray-700">Taxa de Correção</label>
               <p className="text-sm text-gray-900">
-                {currentUnit.price_correction_rate !== undefined && currentUnit.price_correction_rate !== null
-                  ? `${((1 + currentUnit.price_correction_rate) * 100).toFixed(2)}%`
-                  : '-'}
+                {(() => {
+                  if (!currentUnit.monthly_adjustment_rates || currentUnit.monthly_adjustment_rates.length === 0) {
+                    return '-'
+                  }
+                  const total = calculateTotalAccumulated(currentUnit.monthly_adjustment_rates)
+                  const correctionRate = 1 + total
+                  return `${truncateTo2Decimals(correctionRate)}%`
+                })()}
               </p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Valor Atual</label>
               <p className="text-lg font-bold text-primary-600">
-                {currentUnit.current_value && !isNaN(currentUnit.current_value)
-                  ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentUnit.current_value)
-                  : '-'}
+                {(() => {
+                  if (!currentUnit.gross_price_amount || isNaN(currentUnit.gross_price_amount)) {
+                    return '-'
+                  }
+                  if (!currentUnit.monthly_adjustment_rates || currentUnit.monthly_adjustment_rates.length === 0) {
+                    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(currentUnit.gross_price_amount))
+                  }
+                  const total = calculateTotalAccumulated(currentUnit.monthly_adjustment_rates)
+                  const correctionRate = 1 + total
+                  const currentValue = currentUnit.gross_price_amount * correctionRate
+                  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(currentValue))
+                })()}
               </p>
             </div>
             <div>
@@ -270,7 +323,7 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
                       rate.november_rate || 0,
                       rate.december_rate || 0
                     ]
-                    const isFirstRow = index === 0
+                    const isLastRow = index === currentUnit.monthly_adjustment_rates.length - 1
                     return (
                       <tr key={rate.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium text-gray-900">{rate.year}</td>
@@ -280,9 +333,10 @@ export function UnitDetails({ unitWithBuilding, canManage = true }: UnitDetailsP
                           </td>
                         ))}
                         <td className="text-center py-3 px-4 font-semibold text-gray-900">
-                          {isFirstRow && currentUnit.price_correction_rate && currentUnit.price_correction_rate > 0
-                            ? `${(currentUnit.price_correction_rate * 100).toFixed(2)}%`
-                            : '-'}
+                          {isLastRow ? (() => {
+                            const total = calculateTotalAccumulated(currentUnit.monthly_adjustment_rates)
+                            return total > 0 ? `${truncateTo2Decimals(total)}%` : '-'
+                          })() : '-'}
                         </td>
                       </tr>
                     )
