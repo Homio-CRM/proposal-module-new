@@ -11,7 +11,6 @@ import { BuildingWithUnits, UnitStatus } from '@/lib/types/building'
 import { ArrowLeft, AlertCircle, TrendingUp, Download } from 'lucide-react'
 import { usePreferencesContext } from '@/lib/contexts/PreferencesContext'
 import { canManageBuildings as canManageBuildingsPermission, canViewBuildings as canViewBuildingsPermission } from '@/lib/utils/permissions'
-import { dataService } from '@/lib/services/dataService'
 
 export default function BuildingDetailPage() {
   const params = useParams()
@@ -22,7 +21,7 @@ export default function BuildingDetailPage() {
   const [buildingLoading, setBuildingLoading] = useState(true)
   const [buildingError, setBuildingError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<UnitStatus | 'all'>('all')
-  const [tableUrl, setTableUrl] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   
   const buildingId = params.buildingId as string
   const userRole = userData?.role ?? 'user'
@@ -51,26 +50,26 @@ export default function BuildingDetailPage() {
     }
   }, [buildingId, userData?.activeLocation, allowViewBuildings, preferencesLoading]);
 
-  useEffect(() => {
-    const loadTableUrl = async () => {
-      if (!userData?.activeLocation) {
-        return;
-      }
+  const handleExport = async () => {
+    if (!building) return;
+    
+    setExporting(true);
+    try {
+      const gid = building.gid ?? 0;
+      const scriptUrl = `https://script.google.com/macros/s/AKfycbycJmj50SauraD89idzY7_VyoNzmNhek03BMSMV2If0adC6Q3xImqH4tScV8qtyvOfc/exec?gid=${gid}`;
       
-      try {
-        const config = await dataService.fetchAgencyConfig(userData.activeLocation);
-        if (config?.table_url) {
-          setTableUrl(config.table_url);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar URL da tabela:', error);
-      }
-    };
-
-    if (userData && !loading) {
-      loadTableUrl();
+      const response = await fetch(scriptUrl);
+      const downloadUrl = await response.text();
+      
+      // Abre a URL retornada em uma nova aba
+      window.open(downloadUrl.trim(), '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      alert('Erro ao gerar o arquivo de exportação. Tente novamente.');
+    } finally {
+      setExporting(false);
     }
-  }, [userData, loading]);
+  };
 
   if (loading || buildingLoading || preferencesLoading) {
     return (
@@ -196,20 +195,15 @@ export default function BuildingDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {tableUrl && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const gid = building?.gid ?? 0;
-                    const exportUrl = `${tableUrl}/export?format=pdf&gid=${gid}`;
-                    window.open(exportUrl, '_blank', 'noopener,noreferrer');
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Exportar situação atual
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {exporting ? 'Gerando...' : 'Exportar situação atual'}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push(`/buildings/${buildingId}/taxes`)}
