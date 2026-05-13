@@ -69,9 +69,19 @@ const CustomDatePicker = forwardRef<HTMLButtonElement, DatePickerProps>(
               setOpen(false);
             }}
             locale={ptBR}
-            disabled={(date) =>
-              Boolean((minDate && date < minDate) || (maxDate && date > maxDate))
-            }
+            disabled={(date) => {
+              if (minDate) {
+                const min = new Date(minDate)
+                min.setHours(0, 0, 0, 0)
+                if (date < min) return true
+              }
+              if (maxDate) {
+                const max = new Date(maxDate)
+                max.setHours(23, 59, 59, 999)
+                if (date > max) return true
+              }
+              return false
+            }}
             initialFocus
           />
         </PopoverContent>
