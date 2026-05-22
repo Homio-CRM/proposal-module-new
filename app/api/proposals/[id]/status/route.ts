@@ -302,6 +302,9 @@ export async function PATCH(
 			}
 		}
 
+		let financeWebhookWarning: string | null = null
+		let financeWebhookError: string | null = null
+
 		if (status === 'aprovada') {
 			try {
 				const { data: proposalWithOpportunity } = await supabaseAdmin
@@ -310,16 +313,25 @@ export async function PATCH(
 					.eq('id', proposalId)
 					.single()
 
-				if (proposalWithOpportunity?.opportunity_id) {
+				if (!proposalWithOpportunity?.opportunity_id) {
+					financeWebhookError = 'Proposta aprovada sem opportunity_id — webhook finance-part nao foi disparado'
+					console.error('[PATCH /api/proposals/[id]/status]', financeWebhookError)
+				} else {
 					const { data: installmentsData, error: installmentsError } = await supabaseAdmin
 						.from('installments')
 						.select('id, type, amount_per_installment, installments_count, total_amount')
 						.eq('proposal_id', proposalId)
 						.order('created_at', { ascending: true })
 
-					if (!installmentsError && installmentsData && installmentsData.length > 0) {
+					if (installmentsError) {
+						financeWebhookError = `Erro ao buscar installments: ${installmentsError.message}`
+						console.error('[PATCH /api/proposals/[id]/status]', financeWebhookError)
+					} else if (!installmentsData || installmentsData.length === 0) {
+						financeWebhookError = 'Proposta aprovada sem parcelas cadastradas — clausula financeira nao foi gerada'
+						console.error('[PATCH /api/proposals/[id]/status]', financeWebhookError)
+					} else {
 						const installmentIds = installmentsData.map(inst => inst.id)
-						
+
 						const { data: datesData, error: datesError } = await supabaseAdmin
 							.from('installments_dates')
 							.select('installment_id, date')
@@ -343,7 +355,7 @@ export async function PATCH(
 						const installments = installmentsData.map(inst => {
 							const dates = datesMap[inst.id] || []
 							const isIntermediarias = inst.type === 'intermediarias'
-							
+
 							return {
 								id: inst.id,
 								condition: inst.type,
@@ -362,11 +374,16 @@ export async function PATCH(
 						)
 
 						if (!webhookResult.success) {
+							financeWebhookError = webhookResult.message || 'Falha desconhecida no webhook finance-part'
 							console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', webhookResult.message)
+						} else if (webhookResult.warning) {
+							financeWebhookWarning = webhookResult.warning
+							console.warn('[PATCH /api/proposals/[id]/status] Webhook finance-part com warning:', webhookResult.warning)
 						}
 					}
 				}
 			} catch (error) {
+				financeWebhookError = error instanceof Error ? error.message : 'Erro desconhecido ao enviar webhook finance-part'
 				console.error('[PATCH /api/proposals/[id]/status] Erro ao enviar webhook finance-part:', error)
 			}
 		}
@@ -379,7 +396,12 @@ export async function PATCH(
 
 		const frontendStatus = reverseStatusMap[data.status] || 'em_analise'
 
-		return NextResponse.json({ id: data.id, status: frontendStatus })
+		return NextResponse.json({
+			id: data.id,
+			status: frontendStatus,
+			...(financeWebhookWarning ? { financeWebhookWarning } : {}),
+			...(financeWebhookError ? { financeWebhookError } : {})
+		})
 	} catch (error) {
 		console.error('[PATCH /api/proposals/[id]/status] Erro:', error)
 		return NextResponse.json({ 
