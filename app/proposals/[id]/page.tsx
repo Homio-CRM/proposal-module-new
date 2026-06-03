@@ -50,6 +50,7 @@ export default function ProposalDetailPage() {
   const [proposalLoading, setProposalLoading] = useState(true)
   const [proposalError, setProposalError] = useState<string | null>(null)
   const [webhookErrorDialogOpen, setWebhookErrorDialogOpen] = useState(false)
+  const [financeNotification, setFinanceNotification] = useState<{ type: 'warning' | 'error'; message: string } | null>(null)
   const userRole = userData?.role ?? 'user'
   const allowViewProposals = canViewProposalsPermission(preferences ?? null, userRole)
   const allowManageProposals = canManageProposalsPermission(preferences ?? null, userRole)
@@ -127,7 +128,13 @@ export default function ProposalDetailPage() {
       }
 
       const responseData = await response.json().catch(() => null)
-      
+
+      if (responseData?.financeWebhookError) {
+        setFinanceNotification({ type: 'error', message: responseData.financeWebhookError as string })
+      } else if (responseData?.financeWebhookWarning) {
+        setFinanceNotification({ type: 'warning', message: responseData.financeWebhookWarning as string })
+      }
+
       if (userData?.companyId) {
         dataService.clearProposalsCache(
           userData.companyId,
@@ -420,6 +427,31 @@ export default function ProposalDetailPage() {
           <DialogFooter>
             <Button onClick={() => setWebhookErrorDialogOpen(false)}>
               Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={financeNotification !== null} onOpenChange={(open) => !open && setFinanceNotification(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className={`flex items-center gap-2 ${financeNotification?.type === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
+              <AlertCircle className="h-5 w-5" />
+              {financeNotification?.type === 'error' ? 'Falha ao gerar cláusula financeira' : 'Cláusula gerada com pendência'}
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              A proposta foi aprovada. Porém:
+              <br /><br />
+              {financeNotification?.message}
+              <br /><br />
+              {financeNotification?.type === 'error'
+                ? 'A cláusula financeira NÃO foi gerada na oportunidade. Corrija o problema e reaprove a proposta, ou gere a cláusula manualmente.'
+                : 'A cláusula foi gerada com um placeholder. Atualize o cadastro da conta bancária do empreendimento e reaprove a proposta para regerar a cláusula correta.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setFinanceNotification(null)}>
+              Entendi
             </Button>
           </DialogFooter>
         </DialogContent>

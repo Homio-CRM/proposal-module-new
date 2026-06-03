@@ -15,6 +15,9 @@ interface FinanceWebhookPayload {
 interface WebhookResponse {
   success: boolean
   message?: string
+  warning?: string | null
+  empreendimento?: string | null
+  empreendimentoMapeado?: boolean
 }
 
 export async function sendFinancePartWebhook(
@@ -29,26 +32,34 @@ export async function sendFinancePartWebhook(
       locationId
     }
 
-    const response = await fetch('https://api.homio.com.br/webhook/mivita/finance-part', {
+    const baseUrl = process.env.SUPABASE_OPERATIONS_URL || ''
+    const anonKey = process.env.SUPABASE_OPERATIONS_ANON_KEY || ''
+    const url = `${baseUrl.replace(/\/$/, '')}/mivita-finance-part`
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(anonKey ? { Authorization: `Bearer ${anonKey}`, apikey: anonKey } : {}),
       },
       body: JSON.stringify(payload),
     })
 
-    if (!response.ok) {
+    const data = await response.json().catch(() => ({} as Record<string, unknown>))
+
+    if (!response.ok || data.ok === false) {
       return {
         success: false,
-        message: `Erro HTTP: ${response.status}`,
+        message: (data.error as string) || (data.message as string) || `Erro HTTP: ${response.status}`,
       }
     }
 
-    const data = await response.json().catch(() => ({}))
-    
     return {
-      success: data.success === true || response.ok,
-      message: data.message,
+      success: true,
+      message: data.message as string | undefined,
+      warning: (data.warning as string | null) ?? null,
+      empreendimento: (data.empreendimento as string | null) ?? null,
+      empreendimentoMapeado: (data.empreendimento_mapeado as boolean) ?? undefined,
     }
   } catch (error) {
     return {
