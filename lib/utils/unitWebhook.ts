@@ -115,23 +115,33 @@ export async function sendUnitStatusWebhook(
   buildingName?: string
 ): Promise<WebhookResponse> {
   try {
+    let finalAgencyId: string | undefined = agencyId
+    let finalBuildingName: string | undefined = buildingName
+
     const supabase = await getSupabase()
 
-    const { data: unitData } = await supabase
-      .from('units')
-      .select('agency_id, building_id, buildings(name)')
-      .eq('id', unitId)
-      .single()
+    if (!finalAgencyId || !finalBuildingName) {
+      const { data: unitData } = await supabase
+        .from('units')
+        .select('agency_id, building_id, buildings(name)')
+        .eq('id', unitId)
+        .single()
 
-    if (!unitData) {
-      return {
-        success: false,
-        message: 'Unidade não encontrada',
+      if (!unitData) {
+        return {
+          success: false,
+          message: 'Unidade não encontrada',
+        }
+      }
+
+      if (!finalAgencyId && unitData.agency_id) {
+        finalAgencyId = unitData.agency_id
+      }
+
+      if (!finalBuildingName && unitData.buildings && typeof unitData.buildings === 'object' && 'name' in unitData.buildings) {
+        finalBuildingName = unitData.buildings.name as string
       }
     }
-
-    const finalAgencyId = agencyId || unitData.agency_id
-    const finalBuildingName = buildingName || (unitData.buildings && typeof unitData.buildings === 'object' && 'name' in unitData.buildings ? unitData.buildings.name as string : undefined)
 
     if (!finalAgencyId) {
       return {
