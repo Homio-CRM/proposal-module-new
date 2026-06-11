@@ -266,9 +266,17 @@ serve(async (req) => {
     const { conta: contaBancaria, mapped } = getContaBancaria(empreendimento);
     const fluxoPagamento = montarFluxoPagamento(installments, contaBancaria);
 
+    // Valor total da proposta = soma dos totalAmount das parcelas (mesmo total exibido
+    // no cabecalho da clausula). Atualiza o monetaryValue da oportunidade no GHL.
+    const totalProposalValue = installments.reduce(
+      (acc, p) => acc + (Number(p.totalAmount) || 0),
+      0,
+    );
+
     const putBody = (stageId: string) => ({
       pipelineId: MIVITA_PIPELINE_ID,
       pipelineStageId: stageId,
+      monetaryValue: totalProposalValue,
       customFields: [
         { id: CF_FINANCE_PART, key: "finance_part", field_value: fluxoPagamento },
       ],
@@ -282,6 +290,7 @@ serve(async (req) => {
       message: "Cláusula atualizada com sucesso",
       empreendimento,
       empreendimento_mapeado: mapped,
+      valor_total: totalProposalValue,
       warning: mapped
         ? null
         : `Empreendimento "${empreendimento ?? "(vazio)"}" sem conta bancária mapeada. Cláusula gerada com placeholder "${PLACEHOLDER_CONTA}".`,
